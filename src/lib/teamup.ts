@@ -141,6 +141,26 @@ function buildExplicitTeamupEndpoint(template: string | undefined, calendarKey: 
 
   return value;
 }
+
+function isTeamupProxyEndpoint(candidate: string) {
+  if (candidate.startsWith('/api/teamup/')) return true;
+
+  try {
+    const resolved = new URL(candidate, window.location.origin);
+    return resolved.origin === window.location.origin && resolved.pathname.startsWith('/api/teamup/');
+  } catch {
+    return false;
+  }
+}
+
+function formatTeamupTypeError(candidate: string) {
+  if (isTeamupProxyEndpoint(candidate)) {
+    return 'Teamup proxy unavailable: request could not reach /api/teamup. Verify the proxy is configured and running.';
+  }
+
+  return 'Teamup request blocked by browser/network (possible CORS or connectivity issue).';
+}
+
 function mapIcsEventToScheduleEvent(event: ParsedIcsEvent): TeamupMappedEvent | null {
   const rawTitle = typeof event.summary === 'string' ? event.summary.trim() : '';
   if (!rawTitle || !event.dtstart) return null;
@@ -175,14 +195,18 @@ export async function fetchTeamupEvents(rangeStart: string, rangeEnd: string): P
   const basePath = import.meta.env.BASE_URL || '/';
   const normalizedBasePath = basePath.endsWith('/') ? basePath : `${basePath}/`;
   const endpoint = `${normalizedBasePath}api/teamup/feed/${calendarKey}/0.ics`;
-  const directEndpoint = `https://ics.teamup.com/feed/${calendarKey}/0.ics`;
   const explicitEndpoint = buildExplicitTeamupEndpoint(
     import.meta.env.VITE_TEAMUP_ICS_URL ?? '/api/teamup/feed/{calendarKey}/0.ics',
     calendarKey
   );
-  const endpoints = [explicitEndpoint, endpoint, directEndpoint]
+  const endpoints = [explicitEndpoint, endpoint]
     .filter((candidate): candidate is string => Boolean(candidate))
+    .filter((candidate) => isTeamupProxyEndpoint(candidate))
     .filter((candidate, index, list) => list.indexOf(candidate) === index);
+
+  if (endpoints.length === 0) {
+    throw new Error('Teamup proxy unavailable: no CORS-safe Teamup proxy endpoint is configured.');
+  }
 
   let payload = '';
   let lastError = 'Unknown error';
@@ -196,6 +220,11 @@ export async function fetchTeamupEvents(rangeStart: string, rangeEnd: string): P
       });
 
       if (!response.ok) {
+        if (response.status === 404 || response.status === 502) {
+          lastError = `Teamup proxy unavailable (${response.status}): ensure /api/teamup is deployed and reachable.`;
+          continue;
+        }
+
         lastError = `Teamup ICS request failed (${response.status})`;
         if (response.status === 404) continue;
         throw new Error(lastError);
@@ -210,7 +239,11 @@ export async function fetchTeamupEvents(rangeStart: string, rangeEnd: string): P
       lastError = '';
       break;
     } catch (error) {
-      lastError = error instanceof Error ? error.message : 'Teamup ICS request failed.';
+      if (error instanceof TypeError) {
+        lastError = formatTeamupTypeError(candidate);
+      } else {
+        lastError = error instanceof Error ? error.message : 'Teamup ICS request failed.';
+      }
       continue;
     }
   }
