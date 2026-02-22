@@ -1,6 +1,6 @@
 # ECC Scheduler Calendar (Vite + React + TypeScript)
 
-This scheduling app is powered by live Teamup calendar data from `https://teamup.com/ks109ec178962cdfa7`.
+This scheduling app is powered by live Teamup data through the Cloudflare Worker proxy at `https://pevs.hicksrch.workers.dev`.
 
 ## Run locally
 
@@ -17,29 +17,13 @@ pnpm preview
 pnpm lint
 ```
 
-### Local Teamup proxy route
-
-When running `pnpm dev`, Vite now proxies Teamup feed requests from:
-
-- `/api/teamup/feed/{calendarKey}/0.ics`
-
-to Teamup's upstream ICS endpoint:
-
-- `https://ics.teamup.com/feed/{calendarKey}/0.ics`
-
-This prevents local 404s for `/api/teamup/...` and keeps browser requests same-origin while developing.
-
 ## Data source policy
 
-- The app ingests schedule data from Teamup only.
-- PDF parsing and PDF-based ingestion pipelines have been removed.
-- If Teamup is unreachable, the UI shows an unavailable warning instead of falling back to local seed data.
-- Local edits are intentionally disabled until Teamup parity/migration is complete.
-
-Optional environment variable:
-
-- `VITE_TEAMUP_CALENDAR_KEY` (defaults to `ks109ec178962cdfa7`)
-- `VITE_TEAMUP_ICS_URL` (defaults in production to `/api/teamup/feed/{calendarKey}/0.ics`)
+- The frontend only requests Teamup events from the Worker endpoint:
+  - `GET https://pevs.hicksrch.workers.dev/events?startDate=YYYY-MM-DD&endDate=YYYY-MM-DD&tz=America/Indiana/Indianapolis`
+- The frontend does **not** call `https://api.teamup.com` directly.
+- Teamup token and calendar key are injected server-side by the Worker, not exposed in browser code.
+- If the Worker is unreachable, the UI shows a non-intrusive warning banner.
 
 ## Favicon
 
