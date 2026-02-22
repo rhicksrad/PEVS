@@ -1,6 +1,6 @@
 # Shift Scheduler Calendar (Vite + React + TypeScript)
 
-Simple month-view calendar scaffold for planning work shifts for 5 people.
+This app now reads and displays the schedule PDF directly in-browser, then performs lightweight PDF text extraction to populate the calendar with real per-day placeholder coverage entries.
 
 ## Run locally
 
@@ -16,6 +16,38 @@ pnpm build
 pnpm preview
 pnpm lint
 ```
+
+## Schedule PDF parity (current step)
+
+The schedule source-of-truth PDF is committed under `public/`:
+
+- `public/purdue-e-cc-schedule-2026-02-22-20-34-50.pdf`
+
+Because it is in `public/`, Vite serves it as a static asset in both local dev and GitHub Pages builds. The app references it via:
+
+- `import.meta.env.BASE_URL + 'purdue-e-cc-schedule-2026-02-22-20-34-50.pdf'`
+
+So it works for root (`/`) and project subpath deployments.
+
+### What is implemented
+
+- Two-pane desktop layout (calendar/details + PDF viewer).
+- Mobile layout stacks calendar on top and PDF viewer below.
+- PDF viewer (PDF.js):
+  - Previous/next page
+  - Zoom in/out
+  - Fit-width toggle
+  - Scrollable multi-page rendering
+- Calendar integration with parsed PDF output:
+  - Days with parsed entries get a dot marker
+  - Selecting a day shows parsed entries (raw text retained)
+  - Selecting a day attempts a best-effort jump to a page containing that date
+- Parsing module (`src/lib/pdfSchedule.ts`) provides:
+  - `loadPdf(url)`
+  - `extractPagesText(pdf)`
+  - `parseSchedule(pagesText)`
+
+The parser is intentionally heuristic and keeps raw text segments for future refinement.
 
 ## GitHub Pages base path
 
