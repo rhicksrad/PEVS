@@ -202,6 +202,7 @@ function App() {
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const [validationIssues, setValidationIssues] = useState<string[]>([]);
   const [view, setView] = useState<AppView>('calendar');
+  const proxyUnavailable = loadError.toLowerCase().includes('teamup proxy unavailable');
 
   const monthGridDays = useMemo(() => getCalendarGridDays(viewMonth), [viewMonth]);
   const insightDefaultStart = formatIsoDate(monthGridDays[0]);
@@ -467,6 +468,7 @@ function App() {
         {loadError && (
           <div className="warning-banner" role="status">
             <strong>Teamup unavailable:</strong> {loadError}
+            {proxyUnavailable ? ' Action: Teamup proxy unavailable — verify /api/teamup is deployed and running.' : ''}
           </div>
         )}
         <div className="bubble-row">
