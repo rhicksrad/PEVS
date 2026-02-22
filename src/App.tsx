@@ -29,6 +29,8 @@ type ScheduleEvent = {
   context: string;
   person?: TeamMember;
   notes?: string;
+  calendarLabel?: string;
+  calendarColor?: string;
 };
 
 type PersistedSchedulePayload = {
@@ -38,6 +40,14 @@ type PersistedSchedulePayload = {
 };
 
 type NamedValue = { label: string; value: number; color?: string };
+type CalendarKind = 'person' | 'context' | 'other';
+type CalendarMeta = {
+  label: string;
+  color: string;
+  kind: CalendarKind;
+  person?: TeamMember;
+  context?: EventContext;
+};
 
 const STORAGE_KEY = 'pevs-schedule-events-v5';
 const CURRENT_SCHEMA_VERSION = 6;
@@ -58,6 +68,18 @@ const CATEGORY_COLORS: Record<ScheduleCategory, string> = {
   teaching: '#22c55e',
   admin: '#facc15',
   milestone: '#f43f5e'
+};
+
+const DEFAULT_CALENDAR_COLOR = '#475569';
+const KNOWN_CALENDARS: Record<string, Omit<CalendarMeta, 'label'>> = {
+  'aimee brooks': { color: '#5b2c91', kind: 'person', person: 'Aimee Brooks' },
+  'ana aghili': { color: '#f47a20', kind: 'person', person: 'Ana Aghili' },
+  'liz thomovsky': { color: '#b91c1c', kind: 'person', person: 'Liz Thomovsky' },
+  'paula johnson': { color: '#2d56b3', kind: 'person', person: 'Paula Johnson' },
+  'general ecc service': { color: '#2e8b2f', kind: 'context', context: 'General ECC Service' },
+  'ecc teaching': { color: '#eab308', kind: 'context', context: 'ECC Teaching' },
+  'general events': { color: '#49b3a2', kind: 'context', context: 'General Events' },
+  'ecc resident chief': { color: '#a63a8d', kind: 'other' }
 };
 
 const withAlpha = (hex: string, alpha: number) => {
@@ -92,6 +114,34 @@ function normalizeEvent(event: ScheduleEvent): ScheduleEvent {
   };
 }
 
+function normalizeHexColor(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+  const prefixed = trimmed.startsWith('#') ? trimmed : `#${trimmed}`;
+  return /^#[0-9a-fA-F]{6}$/.test(prefixed) ? prefixed : undefined;
+}
+
+function toCalendarMeta(label: string, eventColor?: string): CalendarMeta {
+  const normalizedLabel = label.trim();
+  const known = KNOWN_CALENDARS[normalizedLabel.toLowerCase()];
+  if (!known) {
+    return {
+      label: normalizedLabel,
+      color: eventColor ?? DEFAULT_CALENDAR_COLOR,
+      kind: 'other'
+    };
+  }
+
+  return {
+    label: normalizedLabel,
+    color: eventColor ?? known.color,
+    kind: known.kind,
+    person: known.person,
+    context: known.context
+  };
+}
+
 function normalizeLoadedEvents(events: ScheduleEvent[]) {
   return sortEvents(events.map(normalizeEvent));
 }
@@ -106,6 +156,7 @@ const formatDisplayTime = (time?: string) => {
 
 function getEventColor(event: ScheduleEvent) {
   if (event.person) return PERSON_COLORS[event.person];
+  if (event.calendarColor) return event.calendarColor;
   return CATEGORY_COLORS[event.category];
 }
 
@@ -153,6 +204,19 @@ function convertTeamupEvents(teamupEvents: TeamupEvent[]): ScheduleEvent[] {
     const date = event.all_day ? event.start_dt.slice(0, 10) : toLocalDateKey(event.start_dt);
     if (!date) return;
 
+    const eventRecord = event as Record<string, unknown>;
+    const subcalendar = eventRecord.subcalendar as Record<string, unknown> | undefined;
+    const rawLabel =
+      (typeof eventRecord.subcalendar_name === 'string' && eventRecord.subcalendar_name) ||
+      (typeof eventRecord.calendar_name === 'string' && eventRecord.calendar_name) ||
+      (typeof subcalendar?.name === 'string' && subcalendar.name) ||
+      'General Events';
+    const rawColor =
+      normalizeHexColor(eventRecord.subcalendar_color) ??
+      normalizeHexColor(eventRecord.calendar_color) ??
+      normalizeHexColor(subcalendar?.color);
+    const meta = toCalendarMeta(rawLabel, rawColor);
+
     mapped.push({
       id: String(event.id),
       externalId: event.remote_id,
@@ -164,7 +228,10 @@ function convertTeamupEvents(teamupEvents: TeamupEvent[]): ScheduleEvent[] {
       allDay: event.all_day,
       notes: event.notes,
       category: 'admin',
-      context: 'General Events'
+      context: meta.context ?? 'General Events',
+      person: meta.person,
+      calendarLabel: meta.label,
+      calendarColor: meta.color
     });
   });
 
@@ -211,6 +278,7 @@ function App() {
   const [selectedDate, setSelectedDate] = useState<Date>(DEFAULT_MONTH);
   const [selectedPeople, setSelectedPeople] = useState<TeamMember[]>([...TEAM]);
   const [selectedContexts, setSelectedContexts] = useState<EventContext[]>([...EVENT_CONTEXTS]);
+  const [selectedCalendars, setSelectedCalendars] = useState<string[]>([]);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const [validationIssues, setValidationIssues] = useState<string[]>([]);
   const [view, setView] = useState<AppView>('calendar');
@@ -262,7 +330,38 @@ function App() {
     };
   }, [viewMonth]);
 
-  const filteredEvents = useMemo(() => events.filter((event) => (!event.person || selectedPeople.includes(event.person)) && selectedContexts.includes(event.context as EventContext)), [events, selectedPeople, selectedContexts]);
+  const calendarLegend = useMemo(() => {
+    const legendMap = new Map<string, CalendarMeta>();
+    events.forEach((event) => {
+      const label = event.calendarLabel ?? event.context;
+      if (!label) return;
+      if (legendMap.has(label)) return;
+      legendMap.set(label, toCalendarMeta(label, event.calendarColor));
+    });
+
+    return Array.from(legendMap.values()).sort((a, b) => a.label.localeCompare(b.label));
+  }, [events]);
+
+  useEffect(() => {
+    if (calendarLegend.length === 0) {
+      setSelectedCalendars([]);
+      return;
+    }
+
+    setSelectedCalendars((current) => {
+      const available = new Set(calendarLegend.map((item) => item.label));
+      const retained = current.filter((item) => available.has(item));
+      if (retained.length > 0) return retained;
+      return calendarLegend.map((item) => item.label);
+    });
+  }, [calendarLegend]);
+
+  const filteredEvents = useMemo(() => events.filter((event) => {
+    const calendarLabel = event.calendarLabel ?? event.context;
+    if (calendarLabel && selectedCalendars.length > 0 && !selectedCalendars.includes(calendarLabel)) return false;
+    if (event.person && !selectedPeople.includes(event.person)) return false;
+    return selectedContexts.includes(event.context as EventContext);
+  }), [events, selectedCalendars, selectedPeople, selectedContexts]);
 
   const dayMap = useMemo(() => filteredEvents.reduce<Record<string, ScheduleEvent[]>>((acc, event) => {
     acc[event.date] = [...(acc[event.date] ?? []), event].sort((a, b) => (a.startTime ?? '99:99').localeCompare(b.startTime ?? '99:99'));
@@ -311,6 +410,7 @@ function App() {
 
   const togglePerson = (person: TeamMember) => setSelectedPeople((current) => (current.includes(person) ? current.filter((item) => item !== person) : [...current, person]));
   const toggleContext = (context: EventContext) => setSelectedContexts((current) => (current.includes(context) ? current.filter((item) => item !== context) : [...current, context]));
+  const toggleCalendar = (label: string) => setSelectedCalendars((current) => (current.includes(label) ? current.filter((item) => item !== label) : [...current, label]));
 
   const downloadDisplayedScreen = async () => {
     if (!printableRef.current || isExportingPdf) return;
@@ -338,6 +438,7 @@ function App() {
     <section className="toolbar">
       {validationIssues.length > 0 && <div className="warning-banner" role="status"><strong>Schedule warnings:</strong> {validationIssues.length} issue(s) detected. Check the browser console for details.</div>}
       {loadError && <div className="warning-banner" role="status"><strong>Unable to load events:</strong> {loadError}</div>}
+      <div className="bubble-row">{calendarLegend.map((calendar) => { const active = selectedCalendars.includes(calendar.label); return <button key={calendar.label} type="button" className={['person-bubble', active ? 'is-active' : ''].join(' ').trim()} style={{ borderColor: calendar.color, color: calendar.color, background: active ? `${calendar.color}33` : 'rgba(15, 23, 42, 0.85)' }} onClick={() => toggleCalendar(calendar.label)}>{calendar.label}</button>; })}</div>
       <div className="bubble-row">{TEAM.map((person) => { const active = selectedPeople.includes(person); return <button key={person} type="button" className={['person-bubble', active ? 'is-active' : ''].join(' ').trim()} style={{ borderColor: PERSON_COLORS[person], color: PERSON_COLORS[person], background: active ? `${PERSON_COLORS[person]}33` : 'rgba(15, 23, 42, 0.85)' }} onClick={() => togglePerson(person)}>{person}</button>; })}</div>
       <div className="bubble-row">{EVENT_CONTEXTS.map((context) => { const active = selectedContexts.includes(context); return <button key={context} type="button" className={['person-bubble', active ? 'is-active' : ''].join(' ').trim()} onClick={() => toggleContext(context)}>{context}</button>; })}</div>
     </section>
@@ -352,7 +453,7 @@ function App() {
           const dayEvents = dayMap[iso] ?? [];
           return <button key={iso} type="button" className={['day-cell', isSelected ? 'day-selected' : '', inMonth ? '' : 'day-outside-month'].join(' ').trim()} onClick={() => setSelectedDate(day)}>
             <span className="day-number">{day.getDate()}</span>
-            {dayEvents.length > 0 && <span className="event-dot" aria-label={`${dayEvents.length} events`} />}
+            {dayEvents.length > 0 && <div className="day-event-stack">{dayEvents.slice(0, 5).map((item) => <span key={item.id} className="day-event-pill" style={{ background: getEventColor(item) }}>{item.allDay ? item.title : `${formatDisplayTime(item.startTime).replace(' AM', 'a').replace(' PM', 'p')} ${item.title}`}</span>)}{dayEvents.length > 5 && <span className="day-event-more">+{dayEvents.length - 5} more</span>}</div>}
           </button>;
         })}</section>
         <aside className="day-sidebar">
