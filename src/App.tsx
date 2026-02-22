@@ -11,6 +11,7 @@ import {
 } from './lib/date';
 import starterSchedule from './data/starterSchedule.json';
 import { fetchTeamupEvents } from './lib/teamup';
+import { validateScheduleEvents } from './lib/scheduleValidation';
 import { validateSeedSchedule, type SeedEvent } from './lib/seedValidation';
 
 type ScheduleCategory = 'shift' | 'teaching' | 'admin' | 'milestone';
@@ -18,6 +19,8 @@ type TeamMember = 'Aimee Brooks' | 'Ana Aghili' | 'Liz Thomovsky' | 'Paula Johns
 
 type ScheduleEvent = {
   id: string;
+  externalId?: string;
+  source?: 'teamup' | 'fallback';
   date: string;
   title: string;
   startTime?: string;
@@ -141,6 +144,8 @@ function generateBaseSchedule(): ScheduleEvent[] {
   return normalizeLoadedEvents(
     seedEvents.map((event) => ({
       id: makeId(event.title, event.date, event.startTime ?? undefined),
+      externalId: makeId(event.title, event.date, event.startTime ?? undefined),
+      source: 'fallback',
       date: event.date,
       title: event.title,
       startTime: event.startTime ?? undefined,
@@ -161,19 +166,7 @@ function makePersistedPayload(events: ScheduleEvent[]): PersistedSchedulePayload
 }
 
 function convertTeamupEvents(teamupEvents: Awaited<ReturnType<typeof fetchTeamupEvents>>): ScheduleEvent[] {
-  return normalizeLoadedEvents(
-    teamupEvents.map((event) => ({
-      id: makeId(event.title, event.date, event.startTime ?? undefined),
-      date: event.date,
-      title: event.title,
-      startTime: event.startTime,
-      endTime: event.endTime,
-      notes: event.notes,
-      category: 'admin',
-      context: 'General Events',
-      person: getPersonFromMarker(event.title.match(PERSON_MARKER_PATTERN)?.[1] ?? '')
-    }))
-  );
+  return normalizeLoadedEvents(teamupEvents);
 }
 
 function App() {
@@ -187,6 +180,7 @@ function App() {
   const [selectedPeople, setSelectedPeople] = useState<TeamMember[]>([...TEAM]);
   const [selectedContexts, setSelectedContexts] = useState<EventContext[]>([...EVENT_CONTEXTS]);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const [validationIssues, setValidationIssues] = useState<string[]>([]);
 
   useEffect(() => {
     let isCancelled = false;
@@ -200,7 +194,12 @@ function App() {
       try {
         const fetchedEvents = await fetchTeamupEvents(rangeStart, rangeEnd);
         const normalized = convertTeamupEvents(fetchedEvents);
+        const validation = validateScheduleEvents(normalized);
         if (isCancelled) return;
+        if (validation.issues.length) {
+          console.warn('[scheduleValidation] Teamup normalization issues:\n' + validation.issues.map((issue) => `- ${issue}`).join('\n'));
+        }
+        setValidationIssues(validation.issues);
         setEvents(normalized);
         setDataSource('teamup');
         localStorage.setItem(
@@ -213,6 +212,11 @@ function App() {
         );
       } catch {
         if (isCancelled) return;
+        const validation = validateScheduleEvents(seedEvents);
+        if (validation.issues.length) {
+          console.warn('[scheduleValidation] Fallback schedule issues:\n' + validation.issues.map((issue) => `- ${issue}`).join('\n'));
+        }
+        setValidationIssues(validation.issues);
         setEvents(seedEvents);
         setDataSource('fallback');
         localStorage.setItem(
@@ -363,6 +367,11 @@ function App() {
       </header>
 
       <section className="toolbar">
+        {validationIssues.length > 0 && (
+          <div className="warning-banner" role="status">
+            <strong>Schedule warnings:</strong> {validationIssues.length} issue(s) detected. Check the browser console for details.
+          </div>
+        )}
         <div className="bubble-row">
           {TEAM.map((person) => {
             const active = selectedPeople.includes(person);
