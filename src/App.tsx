@@ -29,10 +29,17 @@ const STORAGE_KEY = 'pevs-schedule-events-v4';
 const DEFAULT_MONTH = new Date(2026, 1, 1);
 const TEAM: TeamMember[] = ['Aimee Brooks', 'Ana Aghili', 'Liz Thomovsky', 'Paula Johnson'];
 const PERSON_COLORS: Record<TeamMember, string> = {
-  'Aimee Brooks': '#ec4899',
-  'Ana Aghili': '#3b82f6',
-  'Liz Thomovsky': '#10b981',
-  'Paula Johnson': '#f97316'
+  'Aimee Brooks': '#2563eb',
+  'Ana Aghili': '#f97316',
+  'Liz Thomovsky': '#dc2626',
+  'Paula Johnson': '#38bdf8'
+};
+
+const CATEGORY_COLORS: Record<ScheduleCategory, string> = {
+  shift: '#a78bfa',
+  teaching: '#22c55e',
+  admin: '#facc15',
+  milestone: '#f43f5e'
 };
 
 const withAlpha = (hex: string, alpha: number) => {
@@ -56,6 +63,11 @@ const formatDisplayTime = (time?: string) => {
   const hour12 = hours % 12 || 12;
   return `${hour12}:${String(minutes).padStart(2, '0')} ${period}`;
 };
+
+function getEventColor(event: ScheduleEvent) {
+  if (event.person) return PERSON_COLORS[event.person];
+  return CATEGORY_COLORS[event.category];
+}
 
 function hoursBetween(start?: string, end?: string) {
   if (!start || !end) return 0;
@@ -328,8 +340,8 @@ function App() {
                     key={item.id}
                     className="event-chip"
                     style={{
-                      borderLeftColor: item.person ? PERSON_COLORS[item.person] : '#6366f1',
-                      background: item.person ? withAlpha(PERSON_COLORS[item.person], 0.18) : '#eef2ff',
+                      borderLeftColor: getEventColor(item),
+                      background: withAlpha(getEventColor(item), 0.22),
                       color: '#e2e8f0'
                     }}
                     onClick={(e) => {
