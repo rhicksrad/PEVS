@@ -46,7 +46,7 @@ type CalendarMeta = {
   color: string;
   kind: CalendarKind;
   person?: TeamMember;
-  context?: EventContext;
+  context?: string;
 };
 
 const STORAGE_KEY = 'pevs-schedule-events-v5';
@@ -56,7 +56,6 @@ const TEAM: TeamMember[] = ['Aimee Brooks', 'Ana Aghili', 'Liz Thomovsky', 'Paul
 const PERSON_MARKER_PATTERN = /\(([^)]+)\)/;
 const ALPHA_NUMERIC_PATTERN = /[^a-z0-9]+/g;
 const EVENT_CONTEXTS = ['General ECC Service', 'ECC Teaching', 'General Events'] as const;
-type EventContext = (typeof EVENT_CONTEXTS)[number];
 const PERSON_COLORS: Record<TeamMember, string> = {
   'Aimee Brooks': '#2563eb',
   'Ana Aghili': '#f97316',
@@ -301,13 +300,13 @@ function convertTeamupEvents(teamupEvents: TeamupEvent[]): ScheduleEvent[] {
     const rawLabel =
       (typeof eventRecord.subcalendar_name === 'string' && eventRecord.subcalendar_name) ||
       (typeof eventRecord.calendar_name === 'string' && eventRecord.calendar_name) ||
-      (typeof subcalendar?.name === 'string' && subcalendar.name) ||
-      'General Events';
+      (typeof subcalendar?.name === 'string' && subcalendar.name);
+    const normalizedRawLabel = typeof rawLabel === 'string' ? rawLabel.trim() : '';
     const rawColor =
       normalizeHexColor(eventRecord.subcalendar_color) ??
       normalizeHexColor(eventRecord.calendar_color) ??
       normalizeHexColor(subcalendar?.color);
-    const meta = toCalendarMeta(rawLabel, rawColor);
+    const meta = toCalendarMeta(normalizedRawLabel || 'General Events', rawColor);
     const ownerCandidates = extractOwnerCandidates(eventRecord);
     const inferredOwner =
       meta.person ??
@@ -324,6 +323,7 @@ function convertTeamupEvents(teamupEvents: TeamupEvent[]): ScheduleEvent[] {
         eventRecord.created_by,
         eventRecord.updated_by
       );
+    const context = meta.context ?? (normalizedRawLabel || 'General Events');
 
     if (shouldDebugUnmatchedOwners && !inferredOwner) {
       console.debug('Teamup event owner unmatched', {
@@ -345,7 +345,7 @@ function convertTeamupEvents(teamupEvents: TeamupEvent[]): ScheduleEvent[] {
       allDay: event.all_day,
       notes: event.notes,
       category: 'admin',
-      context: meta.context ?? 'General Events',
+      context,
       person: inferredOwner,
       calendarLabel: meta.label,
       calendarColor: meta.color
@@ -394,7 +394,7 @@ function App() {
   const [viewMonth, setViewMonth] = useState(DEFAULT_MONTH);
   const [selectedDate, setSelectedDate] = useState<Date>(DEFAULT_MONTH);
   const [selectedPeople, setSelectedPeople] = useState<TeamMember[]>([...TEAM]);
-  const [selectedContexts, setSelectedContexts] = useState<EventContext[]>([...EVENT_CONTEXTS]);
+  const [selectedContexts, setSelectedContexts] = useState<string[]>([...EVENT_CONTEXTS]);
   const [selectedCalendars, setSelectedCalendars] = useState<string[]>([]);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const [validationIssues, setValidationIssues] = useState<string[]>([]);
@@ -459,6 +459,28 @@ function App() {
     return Array.from(legendMap.values()).sort((a, b) => a.label.localeCompare(b.label));
   }, [events]);
 
+  const availableContexts = useMemo(() => {
+    const knownContexts = new Set<string>(EVENT_CONTEXTS);
+    return [
+      ...EVENT_CONTEXTS,
+      ...Array.from(new Set(events.map((event) => event.context).filter((context) => !knownContexts.has(context)))).sort((a, b) => a.localeCompare(b))
+    ];
+  }, [events]);
+
+  useEffect(() => {
+    if (availableContexts.length === 0) {
+      setSelectedContexts([]);
+      return;
+    }
+
+    setSelectedContexts((current) => {
+      const available = new Set(availableContexts);
+      const retained = current.filter((item) => available.has(item));
+      if (retained.length > 0) return retained;
+      return availableContexts;
+    });
+  }, [availableContexts]);
+
   useEffect(() => {
     if (calendarLegend.length === 0) {
       setSelectedCalendars([]);
@@ -477,7 +499,7 @@ function App() {
     const calendarLabel = event.calendarLabel ?? event.context;
     if (calendarLabel && selectedCalendars.length > 0 && !selectedCalendars.includes(calendarLabel)) return false;
     if (event.person && !selectedPeople.includes(event.person)) return false;
-    return selectedContexts.includes(event.context as EventContext);
+    return selectedContexts.includes(event.context);
   }), [events, selectedCalendars, selectedPeople, selectedContexts]);
 
   const dayMap = useMemo(() => filteredEvents.reduce<Record<string, ScheduleEvent[]>>((acc, event) => {
@@ -526,7 +548,7 @@ function App() {
   }, [insightEvents, insightDays]);
 
   const togglePerson = (person: TeamMember) => setSelectedPeople((current) => (current.includes(person) ? current.filter((item) => item !== person) : [...current, person]));
-  const toggleContext = (context: EventContext) => setSelectedContexts((current) => (current.includes(context) ? current.filter((item) => item !== context) : [...current, context]));
+  const toggleContext = (context: string) => setSelectedContexts((current) => (current.includes(context) ? current.filter((item) => item !== context) : [...current, context]));
   const toggleCalendar = (label: string) => setSelectedCalendars((current) => (current.includes(label) ? current.filter((item) => item !== label) : [...current, label]));
 
   const downloadDisplayedScreen = async () => {
@@ -557,7 +579,7 @@ function App() {
       {loadError && <div className="warning-banner" role="status"><strong>Unable to load events:</strong> {loadError}</div>}
       <div className="bubble-row">{calendarLegend.map((calendar) => { const active = selectedCalendars.includes(calendar.label); return <button key={calendar.label} type="button" className={['person-bubble', active ? 'is-active' : ''].join(' ').trim()} style={{ borderColor: calendar.color, color: calendar.color, background: active ? `${calendar.color}33` : 'rgba(15, 23, 42, 0.85)' }} onClick={() => toggleCalendar(calendar.label)}>{calendar.label}</button>; })}</div>
       <div className="bubble-row">{TEAM.map((person) => { const active = selectedPeople.includes(person); return <button key={person} type="button" className={['person-bubble', active ? 'is-active' : ''].join(' ').trim()} style={{ borderColor: PERSON_COLORS[person], color: PERSON_COLORS[person], background: active ? `${PERSON_COLORS[person]}33` : 'rgba(15, 23, 42, 0.85)' }} onClick={() => togglePerson(person)}>{person}</button>; })}</div>
-      <div className="bubble-row">{EVENT_CONTEXTS.map((context) => { const active = selectedContexts.includes(context); return <button key={context} type="button" className={['person-bubble', active ? 'is-active' : ''].join(' ').trim()} onClick={() => toggleContext(context)}>{context}</button>; })}</div>
+      <div className="bubble-row">{availableContexts.map((context) => { const active = selectedContexts.includes(context); return <button key={context} type="button" className={['person-bubble', active ? 'is-active' : ''].join(' ').trim()} onClick={() => toggleContext(context)}>{context}</button>; })}</div>
     </section>
 
     {view === 'calendar' ? <>
