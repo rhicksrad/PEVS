@@ -27,7 +27,14 @@ type ScheduleEvent = {
   notes?: string;
 };
 
+type PersistedSchedulePayload = {
+  version: number;
+  events: ScheduleEvent[];
+};
+
 const STORAGE_KEY = 'pevs-schedule-events-v5';
+const LEGACY_STORAGE_KEY = 'pevs-schedule-events-v4';
+const CURRENT_SCHEMA_VERSION = 6;
 const DEFAULT_MONTH = new Date(2026, 1, 1);
 const TEAM: TeamMember[] = ['Aimee Brooks', 'Ana Aghili', 'Liz Thomovsky', 'Paula Johnson'];
 const PERSON_MARKER_PATTERN = /\(([^)]+)\)/;
@@ -88,6 +95,11 @@ function normalizeLoadedEvents(events: ScheduleEvent[]) {
   return sortEvents(events.map(normalizeEvent));
 }
 
+const EVENT_CATEGORY_SET = new Set<ScheduleCategory>(['shift', 'teaching', 'admin', 'milestone']);
+const EVENT_CONTEXT_SET = new Set<string>(EVENT_CONTEXTS);
+const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
+const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
 const formatDisplayTime = (time?: string) => {
   if (!time) return 'All day';
   const [hours, minutes] = time.split(':').map(Number);
@@ -142,15 +154,107 @@ function generateBaseSchedule(): ScheduleEvent[] {
   );
 }
 
+function makePersistedPayload(events: ScheduleEvent[]): PersistedSchedulePayload {
+  return {
+    version: CURRENT_SCHEMA_VERSION,
+    events: normalizeLoadedEvents(events)
+  };
+}
+
+function isPayloadShape(value: unknown): value is PersistedSchedulePayload {
+  if (!value || typeof value !== 'object') return false;
+  const maybePayload = value as PersistedSchedulePayload;
+  return typeof maybePayload.version === 'number' && Array.isArray(maybePayload.events);
+}
+
+function findCanonicalMatch(event: Partial<ScheduleEvent>, canonicalEvents: ScheduleEvent[]) {
+  const normalizedTitle = typeof event.title === 'string' ? event.title.trim().toLowerCase() : '';
+  return canonicalEvents.find((candidate) => {
+    if (event.id && candidate.id === event.id) return true;
+    const candidateTitle = candidate.title.trim().toLowerCase();
+    return candidate.date === event.date && candidateTitle === normalizedTitle && candidate.startTime === event.startTime;
+  });
+}
+
+function sanitizeStoredEvents(rawEvents: unknown[], canonicalEvents: ScheduleEvent[]): ScheduleEvent[] | null {
+  const sanitized: ScheduleEvent[] = [];
+  const seenIds = new Set<string>();
+
+  for (const entry of rawEvents) {
+    if (!entry || typeof entry !== 'object') return null;
+    const item = entry as Partial<ScheduleEvent>;
+    const canonical = findCanonicalMatch(item, canonicalEvents);
+    const category = typeof item.category === 'string' && EVENT_CATEGORY_SET.has(item.category as ScheduleCategory)
+      ? (item.category as ScheduleCategory)
+      : canonical?.category;
+    const date = typeof item.date === 'string' && DATE_PATTERN.test(item.date) ? item.date : canonical?.date;
+    const title = typeof item.title === 'string' && item.title.trim() ? item.title.trim() : canonical?.title;
+    const context = typeof item.context === 'string' && EVENT_CONTEXT_SET.has(item.context)
+      ? item.context
+      : canonical?.context;
+    const startTime = typeof item.startTime === 'string' && TIME_PATTERN.test(item.startTime) ? item.startTime : canonical?.startTime;
+    const endTime = typeof item.endTime === 'string' && TIME_PATTERN.test(item.endTime) ? item.endTime : canonical?.endTime;
+    const inferredFromMarker = typeof title === 'string' ? getPersonFromMarker(title.match(PERSON_MARKER_PATTERN)?.[1] ?? '') : undefined;
+    const person = typeof item.person === 'string' && isTeamMember(item.person)
+      ? item.person
+      : canonical?.person ?? inferredFromMarker;
+
+    if (!category || !date || !title || !context) return null;
+    if (category === 'shift' && !person) return null;
+
+    const id = typeof item.id === 'string' && item.id.trim() ? item.id : makeId(title, date, startTime);
+    if (seenIds.has(id)) return null;
+
+    seenIds.add(id);
+    sanitized.push(
+      normalizeEvent({
+        id,
+        date,
+        title,
+        startTime,
+        endTime,
+        category,
+        context,
+        person,
+        notes: typeof item.notes === 'string' ? item.notes : undefined
+      })
+    );
+  }
+
+  return sanitized;
+}
+
+function migratePersistedPayload(rawValue: unknown, canonicalEvents: ScheduleEvent[]): PersistedSchedulePayload | null {
+  const rawPayload = Array.isArray(rawValue) ? { version: 4, events: rawValue } : rawValue;
+  if (!isPayloadShape(rawPayload)) return null;
+
+  const sanitizedEvents = sanitizeStoredEvents(rawPayload.events, canonicalEvents);
+  if (!sanitizedEvents || !sanitizedEvents.length) return null;
+
+  return {
+    version: CURRENT_SCHEMA_VERSION,
+    events: normalizeLoadedEvents(sanitizedEvents)
+  };
+}
+
 function readInitialEvents(): ScheduleEvent[] {
-  const saved = localStorage.getItem(STORAGE_KEY);
-  if (!saved) return generateBaseSchedule();
+  const canonicalEvents = generateBaseSchedule();
+  const saved = localStorage.getItem(STORAGE_KEY) ?? localStorage.getItem(LEGACY_STORAGE_KEY);
+  if (!saved) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(makePersistedPayload(canonicalEvents)));
+    return canonicalEvents;
+  }
 
   try {
-    const parsed = JSON.parse(saved) as ScheduleEvent[];
-    return parsed.length ? normalizeLoadedEvents(parsed) : generateBaseSchedule();
+    const parsed = JSON.parse(saved) as unknown;
+    const migrated = migratePersistedPayload(parsed, canonicalEvents) ?? makePersistedPayload(canonicalEvents);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
+    localStorage.removeItem(LEGACY_STORAGE_KEY);
+    return migrated.events;
   } catch {
-    return generateBaseSchedule();
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(makePersistedPayload(canonicalEvents)));
+    localStorage.removeItem(LEGACY_STORAGE_KEY);
+    return canonicalEvents;
   }
 }
 
@@ -176,7 +280,7 @@ function App() {
   }, [events]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(events));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(makePersistedPayload(events)));
   }, [events]);
 
   const dayMap = useMemo(() => {
@@ -223,7 +327,10 @@ function App() {
       endTime: String(formData.get('endTime')) || undefined,
       category: String(formData.get('category')) as ScheduleCategory,
       context: String(formData.get('context')),
-      person: String(formData.get('person')) || undefined,
+      person: (() => {
+        const rawPerson = String(formData.get('person')) || undefined;
+        return rawPerson && isTeamMember(rawPerson) ? rawPerson : undefined;
+      })(),
       notes: String(formData.get('notes')) || undefined
     });
 
