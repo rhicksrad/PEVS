@@ -161,7 +161,9 @@ function mapIcsEventToScheduleEvent(event: ParsedIcsEvent): TeamupMappedEvent | 
 
 export async function fetchTeamupEvents(rangeStart: string, rangeEnd: string): Promise<TeamupMappedEvent[]> {
   const calendarKey = import.meta.env.VITE_TEAMUP_CALENDAR_KEY ?? 'ks109ec178962cdfa7';
-  const endpoint = `/api/teamup/feed/${calendarKey}/0.ics`;
+  const basePath = import.meta.env.BASE_URL || '/';
+  const normalizedBasePath = basePath.endsWith('/') ? basePath : `${basePath}/`;
+  const endpoint = `${normalizedBasePath}api/teamup/feed/${calendarKey}/0.ics`;
   const directEndpoint = `https://ics.teamup.com/feed/${calendarKey}/0.ics`;
   const explicitEndpoint = import.meta.env.VITE_TEAMUP_ICS_URL?.trim();
   const endpoints = [endpoint, directEndpoint, explicitEndpoint]
@@ -172,26 +174,31 @@ export async function fetchTeamupEvents(rangeStart: string, rangeEnd: string): P
   let lastError = 'Unknown error';
 
   for (const candidate of endpoints) {
-    const response = await fetch(candidate, {
-      headers: {
-        Accept: 'text/calendar, text/plain;q=0.9, */*;q=0.1'
+    try {
+      const response = await fetch(candidate, {
+        headers: {
+          Accept: 'text/calendar, text/plain;q=0.9, */*;q=0.1'
+        }
+      });
+
+      if (!response.ok) {
+        lastError = `Teamup ICS request failed (${response.status})`;
+        if (response.status === 404) continue;
+        throw new Error(lastError);
       }
-    });
 
-    if (!response.ok) {
-      lastError = `Teamup ICS request failed (${response.status})`;
-      if (response.status === 404) continue;
-      throw new Error(lastError);
-    }
+      payload = await response.text();
+      if (!payload.includes('BEGIN:VCALENDAR')) {
+        lastError = 'Teamup ICS response was not a calendar payload.';
+        continue;
+      }
 
-    payload = await response.text();
-    if (!payload.includes('BEGIN:VCALENDAR')) {
-      lastError = 'Teamup ICS response was not a calendar payload.';
+      lastError = '';
+      break;
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : 'Teamup ICS request failed.';
       continue;
     }
-
-    lastError = '';
-    break;
   }
 
   if (!payload || lastError) {
