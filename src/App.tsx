@@ -9,6 +9,8 @@ import {
   isSameDay,
   isSameMonth
 } from './lib/date';
+import starterSchedule from './data/starterSchedule.json';
+import { validateSeedSchedule, type SeedEvent } from './lib/seedValidation';
 
 type ScheduleCategory = 'shift' | 'teaching' | 'admin' | 'milestone';
 type TeamMember = 'Aimee Brooks' | 'Ana Aghili' | 'Liz Thomovsky' | 'Paula Johnson';
@@ -92,98 +94,24 @@ function getEventHours(event: ScheduleEvent) {
 }
 
 function generateBaseSchedule(): ScheduleEvent[] {
-  const events: ScheduleEvent[] = [];
+  const seedEvents = starterSchedule as SeedEvent[];
 
-  const supplementalEvents: Omit<ScheduleEvent, 'id'>[] = [
-    { date: '2026-02-02', title: 'Resp distress', startTime: '13:30', category: 'teaching', context: 'ECC Teaching', person: 'Liz Thomovsky' },
-    { date: '2026-02-03', title: 'ICU midblocks', category: 'admin', context: 'General Events' },
-    { date: '2026-02-03', title: 'Grade assignment 1?', startTime: '08:30', category: 'admin', context: 'General Events' },
-    { date: '2026-02-04', title: 'Repro ER', startTime: '13:30', category: 'teaching', context: 'ECC Teaching', person: 'Liz Thomovsky' },
-    { date: '2026-02-05', title: 'Resident Review', startTime: '09:30', category: 'teaching', context: 'ECC Teaching' },
-    { date: '2026-02-09', title: 'Arrhythmia', startTime: '13:30', category: 'teaching', context: 'ECC Teaching', person: 'Aimee Brooks' },
-    { date: '2026-02-11', title: 'Neonatal ER', startTime: '13:30', category: 'teaching', context: 'ECC Teaching', person: 'Ana Aghili' },
-    { date: '2026-02-12', title: 'Journal club', startTime: '09:30', category: 'teaching', context: 'ECC Teaching' },
-    { date: '2026-02-13', title: 'ICU grades', category: 'admin', context: 'General Events' },
-    { date: '2026-02-16', title: 'Block 14', category: 'milestone', context: 'General Events' },
-    { date: '2026-02-17', title: 'Thermal ER', startTime: '13:30', category: 'teaching', context: 'ECC Teaching', person: 'Paula Johnson' },
-    { date: '2026-02-18', title: 'Intern rounds oxy/vent', startTime: '08:00', category: 'teaching', context: 'ECC Teaching' },
-    { date: '2026-02-19', title: 'A&I pneumo wrap up', startTime: '13:30', category: 'teaching', context: 'ECC Teaching' },
-    { date: '2026-02-19', title: 'Bleeding', startTime: '13:30', category: 'teaching', context: 'ECC Teaching', person: 'Paula Johnson' },
-    { date: '2026-02-19', title: 'ECC Grading', startTime: '17:00', category: 'admin', context: 'General Events' },
-    { date: '2026-02-20', title: 'Money talks lecture', startTime: '08:30', category: 'teaching', context: 'ECC Teaching' },
-    { date: '2026-02-20', title: 'Resident Review', startTime: '09:30', category: 'teaching', context: 'ECC Teaching' },
-    { date: '2026-02-20', title: 'ECC retreat', startTime: '17:00', category: 'admin', context: 'General Events' },
-    { date: '2026-02-21', title: 'ECC midblocks', category: 'admin', context: 'General Events' },
-    { date: '2026-02-23', title: 'Endocrine ER', startTime: '13:30', category: 'teaching', context: 'ECC Teaching', person: 'Aimee Brooks' },
-    { date: '2026-02-23', title: 'ICU midblocks', category: 'admin', context: 'General Events' },
-    { date: '2026-02-24', title: 'SVECCS ICU rounds', startTime: '08:00', category: 'teaching', context: 'ECC Teaching' },
-    { date: '2026-02-25', title: 'CHF', startTime: '13:30', category: 'teaching', context: 'ECC Teaching', person: 'Ana Aghili' },
-    { date: '2026-02-26', title: 'Journal club', startTime: '09:30', category: 'teaching', context: 'ECC Teaching' },
-    { date: '2026-02-26', title: 'Prerecorded lecture to residents', startTime: '17:00', category: 'teaching', context: 'ECC Teaching' },
-    { date: '2026-02-27', title: 'Grade assignment 2?', startTime: '09:00', category: 'admin', context: 'General Events' },
-    { date: '2026-02-28', title: 'SVECCS POCUS lab', startTime: '08:00', category: 'teaching', context: 'ECC Teaching' },
-    { date: '2026-03-02', title: 'Shock rounds', startTime: '13:30', category: 'teaching', context: 'ECC Teaching', person: 'Aimee Brooks' },
-    { date: '2026-03-05', title: 'Resident review', startTime: '09:30', category: 'teaching', context: 'ECC Teaching' },
-    { date: '2026-03-11', title: 'ECC grading block 15', startTime: '17:00', category: 'admin', context: 'General Events' },
-    { date: '2026-03-16', title: 'Trauma case conference', startTime: '13:30', category: 'teaching', context: 'ECC Teaching', person: 'Ana Aghili' },
-    { date: '2026-03-20', title: 'ICU midblocks', category: 'admin', context: 'General Events' },
-    { date: '2026-03-24', title: 'Ventilator lab', startTime: '08:00', category: 'teaching', context: 'ECC Teaching', person: 'Liz Thomovsky' },
-    { date: '2026-03-28', title: 'ECC retreat planning', startTime: '10:00', category: 'admin', context: 'General Events' },
-    { date: '2026-04-01', title: 'Sepsis rounds', startTime: '13:30', category: 'teaching', context: 'ECC Teaching', person: 'Paula Johnson' },
-    { date: '2026-04-06', title: 'Resident review', startTime: '09:30', category: 'teaching', context: 'ECC Teaching' },
-    { date: '2026-04-09', title: 'Intern rounds', startTime: '08:00', category: 'teaching', context: 'ECC Teaching' },
-    { date: '2026-04-14', title: 'ICU grades due', category: 'admin', context: 'General Events' },
-    { date: '2026-04-17', title: 'ECC case wrap-up', startTime: '13:30', category: 'teaching', context: 'ECC Teaching', person: 'Aimee Brooks' },
-    { date: '2026-04-22', title: 'Simulation lab', startTime: '13:30', category: 'teaching', context: 'ECC Teaching', person: 'Ana Aghili' },
-    { date: '2026-04-29', title: 'End-of-month review', startTime: '16:00', category: 'admin', context: 'General Events' }
-  ];
+  if (import.meta.env.DEV) {
+    validateSeedSchedule(seedEvents);
+  }
 
-  const addShiftBlocksForMonth = (year: number, monthIndex: number) => {
-    const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
-
-    for (let day = 1; day <= daysInMonth; day += 1) {
-      const dateValue = new Date(year, monthIndex, day);
-      const date = formatIsoDate(dateValue);
-      const weekDay = dateValue.getDay();
-
-      const dayPerson = TEAM[(day - 1) % TEAM.length];
-      const nightPerson = TEAM[day % TEAM.length];
-
-      events.push({
-        id: `day-shift-${date}`,
-        date,
-        title: 'Day Shift',
-        startTime: '08:00',
-        endTime: '18:00',
-        category: 'shift',
-        context: 'General ECC Service',
-        person: dayPerson
-      });
-
-      if (weekDay >= 1 && weekDay <= 5) {
-        events.push({
-          id: `late-shift-${date}`,
-          date,
-          title: 'Night Shift',
-          startTime: '14:00',
-          endTime: '22:00',
-          category: 'shift',
-          context: 'General ECC Service',
-          person: nightPerson
-        });
-      }
-    }
-  };
-
-  addShiftBlocksForMonth(2026, 1);
-  addShiftBlocksForMonth(2026, 2);
-  addShiftBlocksForMonth(2026, 3);
-
-  supplementalEvents.forEach((event) => {
-    events.push({ ...event, id: makeId(event.title, event.date, event.startTime) });
-  });
-
-  return sortEvents(events);
+  return sortEvents(
+    seedEvents.map((event) => ({
+      id: makeId(event.title, event.date, event.startTime ?? undefined),
+      date: event.date,
+      title: event.title,
+      startTime: event.startTime ?? undefined,
+      endTime: event.endTime ?? undefined,
+      category: event.category as ScheduleCategory,
+      context: event.context,
+      person: (event.person ?? undefined) as TeamMember | undefined
+    }))
+  );
 }
 
 function readInitialEvents(): ScheduleEvent[] {
