@@ -110,36 +110,41 @@ function generateBaseSchedule(): ScheduleEvent[] {
     { date: '2026-02-28', title: 'SVECCS POCUS lab', startTime: '08:00', category: 'teaching', context: 'ECC Teaching' }
   ];
 
-  for (let day = 1; day <= 28; day += 1) {
-    const date = formatIsoDate(new Date(2026, 1, day));
-    const weekDay = new Date(2026, 1, day).getDay();
-    const primary = TEAM[(day - 1) % TEAM.length];
-    const support = TEAM[day % TEAM.length];
+  const addShiftBlocksForMonth = (year: number, monthIndex: number) => {
+    const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
 
-    events.push({
-      id: `day-shift-${date}`,
-      date,
-      title: 'Day Shift',
-      startTime: '08:00',
-      endTime: '18:00',
-      category: 'shift',
-      context: 'General ECC Service',
-      person: primary
-    });
+    for (let day = 1; day <= daysInMonth; day += 1) {
+      const dateValue = new Date(year, monthIndex, day);
+      const date = formatIsoDate(dateValue);
+      const weekDay = dateValue.getDay();
 
-    if (weekDay >= 1 && weekDay <= 5) {
       events.push({
-        id: `late-shift-${date}`,
+        id: `day-shift-${date}`,
         date,
-        title: 'Late shift',
-        startTime: '14:00',
-        endTime: '22:00',
+        title: 'Day Shift',
+        startTime: '08:00',
+        endTime: '18:00',
         category: 'shift',
-        context: 'General ECC Service',
-        person: support
+        context: 'General ECC Service'
       });
+
+      if (weekDay >= 1 && weekDay <= 5) {
+        events.push({
+          id: `late-shift-${date}`,
+          date,
+          title: 'Late shift',
+          startTime: '14:00',
+          endTime: '22:00',
+          category: 'shift',
+          context: 'General ECC Service'
+        });
+      }
     }
-  }
+  };
+
+  addShiftBlocksForMonth(2026, 1);
+  addShiftBlocksForMonth(2026, 2);
+  addShiftBlocksForMonth(2026, 3);
 
   supplementalEvents.forEach((event) => {
     events.push({ ...event, id: makeId(event.title, event.date, event.startTime) });
