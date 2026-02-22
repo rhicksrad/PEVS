@@ -1,6 +1,6 @@
 # ECC Scheduler Calendar (Vite + React + TypeScript)
 
-This is an integrated scheduling app (no separate PDF image viewer) that starts with a structured February 2026 ECC schedule and supports ongoing updates directly in the UI.
+This is an integrated scheduling app (no separate PDF image viewer) seeded with the currently used February 2026 schedule from the bundled PDF, and supports ongoing updates directly in the UI.
 
 ## Run locally
 
@@ -30,8 +30,13 @@ pnpm lint
   - ECC Resident Chief
   - ECC Teaching
   - General ECC Service
+- Direct editing workflow for anyone with the URL:
+  - create events from the details panel form
+  - edit events in place
+  - drag and drop events between days to move shifts
+  - copy an editable share link (schedule data stored in URL hash)
 - Built-in command input for quick schedule changes:
-  - `add <title> on YYYY-MM-DD at HH:MM [shift|teaching|admin|milestone]`
+  - `add <title> on YYYY-MM-DD [at HH:MM] [shift|teaching|admin|milestone]`
   - `remove <title> on YYYY-MM-DD`
 - Local persistence via browser `localStorage` for future scheduling edits.
 
