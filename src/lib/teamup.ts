@@ -162,18 +162,42 @@ function mapIcsEventToScheduleEvent(event: ParsedIcsEvent): TeamupMappedEvent | 
 export async function fetchTeamupEvents(rangeStart: string, rangeEnd: string): Promise<TeamupMappedEvent[]> {
   const calendarKey = import.meta.env.VITE_TEAMUP_CALENDAR_KEY ?? 'ks109ec178962cdfa7';
   const endpoint = `/api/teamup/feed/${calendarKey}/0.ics`;
+  const directEndpoint = `https://ics.teamup.com/feed/${calendarKey}/0.ics`;
+  const explicitEndpoint = import.meta.env.VITE_TEAMUP_ICS_URL?.trim();
+  const endpoints = [endpoint, directEndpoint, explicitEndpoint]
+    .filter((candidate): candidate is string => Boolean(candidate))
+    .filter((candidate, index, list) => list.indexOf(candidate) === index);
 
-  const response = await fetch(endpoint, {
-    headers: {
-      Accept: 'text/calendar, text/plain;q=0.9, */*;q=0.1'
+  let payload = '';
+  let lastError = 'Unknown error';
+
+  for (const candidate of endpoints) {
+    const response = await fetch(candidate, {
+      headers: {
+        Accept: 'text/calendar, text/plain;q=0.9, */*;q=0.1'
+      }
+    });
+
+    if (!response.ok) {
+      lastError = `Teamup ICS request failed (${response.status})`;
+      if (response.status === 404) continue;
+      throw new Error(lastError);
     }
-  });
 
-  if (!response.ok) {
-    throw new Error(`Teamup ICS request failed (${response.status})`);
+    payload = await response.text();
+    if (!payload.includes('BEGIN:VCALENDAR')) {
+      lastError = 'Teamup ICS response was not a calendar payload.';
+      continue;
+    }
+
+    lastError = '';
+    break;
   }
 
-  const payload = await response.text();
+  if (!payload || lastError) {
+    throw new Error(lastError || 'Teamup ICS request failed.');
+  }
+
   const rangeStartTime = new Date(`${rangeStart}T00:00:00Z`).getTime();
   const rangeEndTime = new Date(`${rangeEnd}T23:59:59Z`).getTime();
 
