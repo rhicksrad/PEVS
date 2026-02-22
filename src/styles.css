@@ -93,6 +93,29 @@ body { margin: 0; background: radial-gradient(circle at top, #1f2a44 0%, #0e1525
 .day-selected { border-color: #60a5fa; box-shadow: inset 0 0 0 1px #60a5fa; }
 .day-outside-month { opacity: 0.5; }
 
+
+.day-event-stack {
+  display: grid;
+  gap: 0.22rem;
+  margin-top: 0.1rem;
+}
+.day-event-pill {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #f8fafc;
+  font-size: 0.68rem;
+  line-height: 1.2;
+  border-radius: 5px;
+  padding: 0.12rem 0.28rem;
+}
+.day-event-more {
+  font-size: 0.65rem;
+  color: #94a3b8;
+}
+
 .event-dot {
   width: 9px;
   height: 9px;
