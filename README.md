@@ -27,6 +27,7 @@ pnpm lint
 Optional environment variable:
 
 - `VITE_TEAMUP_CALENDAR_KEY` (defaults to `ks109ec178962cdfa7`)
+- `VITE_TEAMUP_ICS_URL` (defaults in production to `/api/teamup/feed/{calendarKey}/0.ics`)
 
 ## Deployment base path
 
