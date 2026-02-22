@@ -12,25 +12,14 @@ export type TeamupMappedEvent = {
   person?: 'Aimee Brooks' | 'Ana Aghili' | 'Liz Thomovsky' | 'Paula Johnson';
 };
 
-type TeamupEventDateTime = {
-  date?: string;
-  datetime?: string;
+type ParsedIcsEvent = {
+  uid?: string;
+  summary?: string;
+  description?: string;
+  dtstart?: string;
+  dtend?: string;
 };
 
-type TeamupApiEvent = {
-  id?: string | number;
-  title?: string;
-  notes?: string;
-  start_dt?: TeamupEventDateTime;
-  end_dt?: TeamupEventDateTime;
-  all_day?: boolean;
-};
-
-type TeamupApiResponse = {
-  events?: TeamupApiEvent[];
-};
-
-const TEAMUP_API_BASE = 'https://api.teamup.com';
 const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const DISPLAY_MARKER_PATTERN = /\(([^)]+)\)/;
 const TEAM_MEMBERS = ['Aimee Brooks', 'Ana Aghili', 'Liz Thomovsky', 'Paula Johnson'] as const;
@@ -66,20 +55,94 @@ function stripDisplayMarkers(title: string) {
   return title.replace(DISPLAY_MARKER_PATTERN, '').trim();
 }
 
-function mapTeamupEventToScheduleEvent(event: TeamupApiEvent): TeamupMappedEvent | null {
-  const rawTitle = typeof event.title === 'string' ? event.title.trim() : '';
-  const rawStart = event.start_dt?.datetime ?? event.start_dt?.date;
-  if (!rawTitle || !rawStart) return null;
+function normalizeIcsDateTime(raw?: string) {
+  if (!raw) return undefined;
+  if (/^\d{8}$/.test(raw)) {
+    return `${raw.slice(0, 4)}-${raw.slice(4, 6)}-${raw.slice(6, 8)}`;
+  }
 
-  const date = toIsoDate(rawStart);
+  const compact = raw.replace('Z', '').replace(/[-:]/g, '');
+  if (/^\d{8}T\d{6}$/.test(compact)) {
+    return `${compact.slice(0, 4)}-${compact.slice(4, 6)}-${compact.slice(6, 8)}T${compact.slice(9, 11)}:${compact.slice(11, 13)}:${compact.slice(13, 15)}Z`;
+  }
+
+  return raw;
+}
+
+function unfoldIcsLines(ics: string): string[] {
+  const lines = ics.replace(/\r\n/g, '\n').split('\n');
+  const unfolded: string[] = [];
+
+  for (const line of lines) {
+    if (/^[ \t]/.test(line) && unfolded.length > 0) {
+      unfolded[unfolded.length - 1] += line.slice(1);
+    } else {
+      unfolded.push(line);
+    }
+  }
+
+  return unfolded;
+}
+
+function decodeIcsText(value?: string) {
+  if (!value) return undefined;
+  return value
+    .replace(/\\n/g, '\n')
+    .replace(/\\,/g, ',')
+    .replace(/\\;/g, ';')
+    .replace(/\\\\/g, '\\')
+    .trim();
+}
+
+function parsePublicIcsEvents(ics: string): ParsedIcsEvent[] {
+  const lines = unfoldIcsLines(ics);
+  const events: ParsedIcsEvent[] = [];
+  let current: ParsedIcsEvent | null = null;
+
+  for (const line of lines) {
+    if (line === 'BEGIN:VEVENT') {
+      current = {};
+      continue;
+    }
+
+    if (line === 'END:VEVENT') {
+      if (current) events.push(current);
+      current = null;
+      continue;
+    }
+
+    if (!current) continue;
+
+    const separatorIndex = line.indexOf(':');
+    if (separatorIndex === -1) continue;
+
+    const rawKey = line.slice(0, separatorIndex);
+    const value = line.slice(separatorIndex + 1);
+    const key = rawKey.split(';')[0].toUpperCase();
+
+    if (key === 'UID') current.uid = value;
+    if (key === 'SUMMARY') current.summary = decodeIcsText(value);
+    if (key === 'DESCRIPTION') current.description = decodeIcsText(value);
+    if (key === 'DTSTART') current.dtstart = normalizeIcsDateTime(value);
+    if (key === 'DTEND') current.dtend = normalizeIcsDateTime(value);
+  }
+
+  return events;
+}
+
+function mapIcsEventToScheduleEvent(event: ParsedIcsEvent): TeamupMappedEvent | null {
+  const rawTitle = typeof event.summary === 'string' ? event.summary.trim() : '';
+  if (!rawTitle || !event.dtstart) return null;
+
+  const date = toIsoDate(event.dtstart);
   if (!date) return null;
 
   const markerMatch = rawTitle.match(DISPLAY_MARKER_PATTERN);
   const person = markerMatch ? getPersonFromMarker(markerMatch[1]) : undefined;
   const title = stripDisplayMarkers(rawTitle);
-  const startTime = event.all_day ? undefined : toTime(event.start_dt?.datetime ?? event.start_dt?.date);
-  const endTime = event.all_day ? undefined : toTime(event.end_dt?.datetime ?? event.end_dt?.date);
-  const externalId = String(event.id ?? makeId(title, date, startTime));
+  const startTime = toTime(event.dtstart);
+  const endTime = toTime(event.dtend);
+  const externalId = event.uid ?? makeId(title, date, startTime);
 
   return {
     id: makeId(title, date, startTime),
@@ -89,7 +152,7 @@ function mapTeamupEventToScheduleEvent(event: TeamupApiEvent): TeamupMappedEvent
     title,
     startTime,
     endTime,
-    notes: typeof event.notes === 'string' ? event.notes : undefined,
+    notes: event.description,
     category: 'admin',
     context: 'General Events',
     person
@@ -97,32 +160,28 @@ function mapTeamupEventToScheduleEvent(event: TeamupApiEvent): TeamupMappedEvent
 }
 
 export async function fetchTeamupEvents(rangeStart: string, rangeEnd: string): Promise<TeamupMappedEvent[]> {
-  const calendarKey = import.meta.env.VITE_TEAMUP_CALENDAR_KEY;
-  const apiToken = import.meta.env.VITE_TEAMUP_API_TOKEN;
-
-  if (!calendarKey || !apiToken) {
-    throw new Error('Missing Teamup credentials. Configure VITE_TEAMUP_CALENDAR_KEY and VITE_TEAMUP_API_TOKEN.');
-  }
-
-  const endpoint = new URL(`${TEAMUP_API_BASE}/${calendarKey}/events`);
-  endpoint.searchParams.set('startDate', rangeStart);
-  endpoint.searchParams.set('endDate', rangeEnd);
+  const calendarKey = import.meta.env.VITE_TEAMUP_CALENDAR_KEY ?? 'ks109ec178962cdfa7';
+  const endpoint = `https://ics.teamup.com/feed/${calendarKey}/events.ics`;
 
   const response = await fetch(endpoint, {
     headers: {
-      'Teamup-Token': apiToken,
-      Accept: 'application/json'
+      Accept: 'text/calendar, text/plain;q=0.9, */*;q=0.1'
     }
   });
 
   if (!response.ok) {
-    throw new Error(`Teamup request failed (${response.status})`);
+    throw new Error(`Teamup ICS request failed (${response.status})`);
   }
 
-  const payload = (await response.json()) as TeamupApiResponse;
-  const events = Array.isArray(payload.events) ? payload.events : [];
+  const payload = await response.text();
+  const rangeStartTime = new Date(`${rangeStart}T00:00:00Z`).getTime();
+  const rangeEndTime = new Date(`${rangeEnd}T23:59:59Z`).getTime();
 
-  return events
-    .map((event) => mapTeamupEventToScheduleEvent(event))
-    .filter((event): event is TeamupMappedEvent => event !== null);
+  return parsePublicIcsEvents(payload)
+    .map((event) => mapIcsEventToScheduleEvent(event))
+    .filter((event): event is TeamupMappedEvent => event !== null)
+    .filter((event) => {
+      const eventTime = new Date(`${event.date}T00:00:00Z`).getTime();
+      return eventTime >= rangeStartTime && eventTime <= rangeEndTime;
+    });
 }

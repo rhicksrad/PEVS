@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import {
@@ -9,10 +9,8 @@ import {
   isSameDay,
   isSameMonth
 } from './lib/date';
-import starterSchedule from './data/starterSchedule.json';
 import { fetchTeamupEvents } from './lib/teamup';
 import { validateScheduleEvents } from './lib/scheduleValidation';
-import { validateSeedSchedule, type SeedEvent } from './lib/seedValidation';
 
 type ScheduleCategory = 'shift' | 'teaching' | 'admin' | 'milestone';
 type TeamMember = 'Aimee Brooks' | 'Ana Aghili' | 'Liz Thomovsky' | 'Paula Johnson';
@@ -20,7 +18,7 @@ type TeamMember = 'Aimee Brooks' | 'Ana Aghili' | 'Liz Thomovsky' | 'Paula Johns
 type ScheduleEvent = {
   id: string;
   externalId?: string;
-  source?: 'teamup' | 'fallback';
+  source?: 'teamup';
   date: string;
   title: string;
   startTime?: string;
@@ -34,11 +32,10 @@ type ScheduleEvent = {
 type PersistedSchedulePayload = {
   version: number;
   events: ScheduleEvent[];
-  source: 'teamup' | 'fallback';
+  source: 'teamup';
 };
 
 const STORAGE_KEY = 'pevs-schedule-events-v5';
-const LEGACY_STORAGE_KEY = 'pevs-schedule-events-v4';
 const CURRENT_SCHEMA_VERSION = 6;
 const DEFAULT_MONTH = new Date(2026, 1, 1);
 const TEAM: TeamMember[] = ['Aimee Brooks', 'Ana Aghili', 'Liz Thomovsky', 'Paula Johnson'];
@@ -70,10 +67,6 @@ const withAlpha = (hex: string, alpha: number) => {
 const toSortKey = (event: ScheduleEvent) => `${event.date}T${event.startTime ?? '99:99'}`;
 const sortEvents = (events: ScheduleEvent[]) => [...events].sort((a, b) => toSortKey(a).localeCompare(toSortKey(b)));
 
-const makeId = (title: string, date: string, startTime?: string) =>
-  `${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${date}-${startTime ?? 'all-day'}`;
-
-const isTeamMember = (value: string): value is TeamMember => TEAM.includes(value as TeamMember);
 
 function getPersonFromMarker(marker: string): TeamMember | undefined {
   const normalizedMarker = marker.trim().toLowerCase();
@@ -87,7 +80,7 @@ function normalizeEvent(event: ScheduleEvent): ScheduleEvent {
   const markerMatch = event.title.match(PERSON_MARKER_PATTERN);
   const markerPerson = markerMatch ? getPersonFromMarker(markerMatch[1]) : undefined;
   const cleanedTitle = markerMatch ? event.title.replace(markerMatch[0], '').trim() : event.title;
-  const person = event.person && isTeamMember(event.person) ? event.person : markerPerson;
+  const person = event.person ? event.person : markerPerson;
 
   return {
     ...event,
@@ -134,37 +127,6 @@ function getEventHours(event: ScheduleEvent) {
   return event.startTime ? 1 : 0;
 }
 
-function generateBaseSchedule(): ScheduleEvent[] {
-  const seedEvents = starterSchedule as SeedEvent[];
-
-  if (import.meta.env.DEV) {
-    validateSeedSchedule(seedEvents);
-  }
-
-  return normalizeLoadedEvents(
-    seedEvents.map((event) => ({
-      id: makeId(event.title, event.date, event.startTime ?? undefined),
-      externalId: makeId(event.title, event.date, event.startTime ?? undefined),
-      source: 'fallback',
-      date: event.date,
-      title: event.title,
-      startTime: event.startTime ?? undefined,
-      endTime: event.endTime ?? undefined,
-      category: event.category as ScheduleCategory,
-      context: event.context,
-      person: (event.person ?? undefined) as TeamMember | undefined
-    }))
-  );
-}
-
-function makePersistedPayload(events: ScheduleEvent[]): PersistedSchedulePayload {
-  return {
-    version: CURRENT_SCHEMA_VERSION,
-    events: normalizeLoadedEvents(events),
-    source: 'fallback'
-  };
-}
-
 function convertTeamupEvents(teamupEvents: Awaited<ReturnType<typeof fetchTeamupEvents>>): ScheduleEvent[] {
   return normalizeLoadedEvents(teamupEvents);
 }
@@ -173,10 +135,9 @@ function App() {
   const printableRef = useRef<HTMLDivElement>(null);
   const [events, setEvents] = useState<ScheduleEvent[]>([]);
   const [isLoadingEvents, setIsLoadingEvents] = useState(true);
-  const [dataSource, setDataSource] = useState<'teamup' | 'fallback'>('fallback');
+  const [loadError, setLoadError] = useState<string>('');
   const [viewMonth, setViewMonth] = useState(DEFAULT_MONTH);
   const [selectedDate, setSelectedDate] = useState<Date>(DEFAULT_MONTH);
-  const [activeEventId, setActiveEventId] = useState<string>('');
   const [selectedPeople, setSelectedPeople] = useState<TeamMember[]>([...TEAM]);
   const [selectedContexts, setSelectedContexts] = useState<EventContext[]>([...EVENT_CONTEXTS]);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
@@ -184,7 +145,6 @@ function App() {
 
   useEffect(() => {
     let isCancelled = false;
-    const seedEvents = generateBaseSchedule();
     const monthGridDays = getCalendarGridDays(viewMonth);
     const rangeStart = formatIsoDate(monthGridDays[0]);
     const rangeEnd = formatIsoDate(monthGridDays[monthGridDays.length - 1]);
@@ -200,8 +160,8 @@ function App() {
           console.warn('[scheduleValidation] Teamup normalization issues:\n' + validation.issues.map((issue) => `- ${issue}`).join('\n'));
         }
         setValidationIssues(validation.issues);
+        setLoadError('');
         setEvents(normalized);
-        setDataSource('teamup');
         localStorage.setItem(
           STORAGE_KEY,
           JSON.stringify({
@@ -210,28 +170,14 @@ function App() {
             source: 'teamup'
           } satisfies PersistedSchedulePayload)
         );
-      } catch {
+      } catch (error) {
         if (isCancelled) return;
-        const validation = validateScheduleEvents(seedEvents);
-        if (validation.issues.length) {
-          console.warn('[scheduleValidation] Fallback schedule issues:\n' + validation.issues.map((issue) => `- ${issue}`).join('\n'));
-        }
-        setValidationIssues(validation.issues);
-        setEvents(seedEvents);
-        setDataSource('fallback');
-        localStorage.setItem(
-          STORAGE_KEY,
-          JSON.stringify({
-            version: CURRENT_SCHEMA_VERSION,
-            events: seedEvents,
-            source: 'fallback'
-          } satisfies PersistedSchedulePayload)
-        );
+        setValidationIssues([]);
+        setEvents([]);
+        setLoadError(error instanceof Error ? error.message : 'Unable to load Teamup data.');
       } finally {
         if (!isCancelled) setIsLoadingEvents(false);
       }
-
-      localStorage.removeItem(LEGACY_STORAGE_KEY);
     };
 
     loadEvents();
@@ -252,11 +198,6 @@ function App() {
     throw new Error(message);
   }, [events]);
 
-  useEffect(() => {
-    if (isLoadingEvents) return;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...makePersistedPayload(events), source: dataSource }));
-  }, [events, dataSource, isLoadingEvents]);
-
   const dayMap = useMemo(() => {
     return events.reduce<Record<string, ScheduleEvent[]>>((acc, event) => {
       if (event.person && !selectedPeople.includes(event.person)) return acc;
@@ -267,9 +208,6 @@ function App() {
   }, [events, selectedPeople, selectedContexts]);
 
   const days = useMemo(() => getCalendarGridDays(viewMonth), [viewMonth]);
-  const selectedIsoDate = formatIsoDate(selectedDate);
-  const selectedEvents = dayMap[selectedIsoDate] ?? [];
-  const activeEvent = events.find((event) => event.id === activeEventId);
 
   const monthlyHours = useMemo(() => {
     const monthPrefix = `${viewMonth.getFullYear()}-${String(viewMonth.getMonth() + 1).padStart(2, '0')}`;
@@ -288,37 +226,6 @@ function App() {
 
   const toggleContext = (context: EventContext) => {
     setSelectedContexts((current) => (current.includes(context) ? current.filter((item) => item !== context) : [...current, context]));
-  };
-
-  const onSaveEvent = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const formData = new FormData(event.currentTarget);
-    const updated = normalizeEvent({
-      id: activeEvent?.id ?? makeId(String(formData.get('title')), String(formData.get('date')), String(formData.get('startTime')) || undefined),
-      title: String(formData.get('title')),
-      date: String(formData.get('date')),
-      startTime: String(formData.get('startTime')) || undefined,
-      endTime: String(formData.get('endTime')) || undefined,
-      category: String(formData.get('category')) as ScheduleCategory,
-      context: String(formData.get('context')),
-      person: (() => {
-        const rawPerson = String(formData.get('person')) || undefined;
-        return rawPerson && isTeamMember(rawPerson) ? rawPerson : undefined;
-      })(),
-      notes: String(formData.get('notes')) || undefined
-    });
-
-    if (!updated.title || !updated.date) return;
-    if (updated.category === 'shift' && !updated.person) return;
-
-    if (activeEvent) {
-      setEvents(sortEvents(events.map((item) => (item.id === activeEvent.id ? { ...updated, id: makeId(updated.title, updated.date, updated.startTime) } : item))));
-    } else {
-      setEvents(sortEvents([...events, { ...updated, id: makeId(updated.title, updated.date, updated.startTime) }]));
-    }
-
-    setActiveEventId('');
-    event.currentTarget.reset();
   };
 
   const downloadDisplayedScreen = async () => {
@@ -355,13 +262,12 @@ function App() {
         <div>
           <h1>{formatMonthYear(viewMonth)}</h1>
           <p className="subheading">Full-screen monthly schedule with person filters, color coding, and editable events.</p>
-          <p className="subheading">{isLoadingEvents ? 'Loading Teamup events…' : dataSource === 'teamup' ? 'Live Teamup data' : 'Fallback seed data'}</p>
+          <p className="subheading">{isLoadingEvents ? 'Loading Teamup events…' : 'Live Teamup data'}</p>
         </div>
         <div className="calendar-actions">
           <button type="button" onClick={() => setViewMonth(new Date(viewMonth.getFullYear(), viewMonth.getMonth() - 1, 1))}>Prev</button>
           <button type="button" onClick={() => setViewMonth(DEFAULT_MONTH)}>Feb 2026</button>
           <button type="button" onClick={() => setViewMonth(new Date(viewMonth.getFullYear(), viewMonth.getMonth() + 1, 1))}>Next</button>
-          <button type="button" onClick={() => { setActiveEventId('new'); setSelectedDate(new Date(viewMonth.getFullYear(), viewMonth.getMonth(), 1)); }}>+ New event</button>
           <button type="button" onClick={downloadDisplayedScreen} disabled={isExportingPdf}>{isExportingPdf ? 'Building PDF…' : 'Download PDF'}</button>
         </div>
       </header>
@@ -370,6 +276,11 @@ function App() {
         {validationIssues.length > 0 && (
           <div className="warning-banner" role="status">
             <strong>Schedule warnings:</strong> {validationIssues.length} issue(s) detected. Check the browser console for details.
+          </div>
+        )}
+        {loadError && (
+          <div className="warning-banner" role="status">
+            <strong>Teamup unavailable:</strong> {loadError}
           </div>
         )}
         <div className="bubble-row">
@@ -428,7 +339,7 @@ function App() {
               key={iso}
               type="button"
               className={['day-cell', isSelected ? 'day-selected' : '', inMonth ? '' : 'day-outside-month'].join(' ').trim()}
-              onClick={() => { setSelectedDate(day); setActiveEventId('new'); }}
+              onClick={() => { setSelectedDate(day); }}
             >
               <span className="day-number">{day.getDate()}</span>
               <div className="day-events">
@@ -444,7 +355,6 @@ function App() {
                     onClick={(e) => {
                       e.stopPropagation();
                       setSelectedDate(day);
-                      setActiveEventId(item.id);
                     }}
                   >
                     <strong>{formatDisplayTime(item.startTime)}</strong> {item.title}
@@ -456,38 +366,6 @@ function App() {
         })}
       </section>
 
-      {activeEventId && (
-        <aside className="event-modal">
-          <div className="modal-card">
-            <h2>{activeEvent ? 'Edit event' : 'Create event'}</h2>
-            <p>{selectedIsoDate} · {selectedEvents.length} item(s)</p>
-            <form onSubmit={onSaveEvent} className="assistant-form">
-              <input name="title" defaultValue={activeEvent?.title ?? ''} placeholder="Event title" required />
-              <input name="date" type="date" defaultValue={activeEvent?.date ?? selectedIsoDate} required />
-              <div className="time-row">
-                <input name="startTime" type="time" defaultValue={activeEvent?.startTime ?? ''} />
-                <input name="endTime" type="time" defaultValue={activeEvent?.endTime ?? ''} />
-              </div>
-              <select name="person" defaultValue={activeEvent?.person ?? ''}>
-                <option value="">Unassigned</option>
-                {TEAM.map((person) => <option key={person} value={person}>{person}</option>)}
-              </select>
-              <input name="context" defaultValue={activeEvent?.context ?? 'General ECC Service'} placeholder="Context" required />
-              <textarea name="notes" defaultValue={activeEvent?.notes ?? ''} placeholder="Notes / details" rows={3} />
-              <select name="category" defaultValue={activeEvent?.category ?? 'shift'}>
-                <option value="shift">shift</option>
-                <option value="teaching">teaching</option>
-                <option value="admin">admin</option>
-                <option value="milestone">milestone</option>
-              </select>
-              <div className="modal-actions">
-                <button type="submit">Save event</button>
-                <button type="button" onClick={() => setActiveEventId('')}>Close</button>
-              </div>
-            </form>
-          </div>
-        </aside>
-      )}
     </main>
   );
 }

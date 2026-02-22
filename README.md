@@ -1,6 +1,6 @@
 # ECC Scheduler Calendar (Vite + React + TypeScript)
 
-This is an integrated scheduling app (no separate PDF image viewer) seeded with the currently used February 2026 schedule from the bundled PDF, and supports ongoing updates directly in the UI.
+This scheduling app is powered by live Teamup calendar data from `https://teamup.com/ks109ec178962cdfa7`.
 
 ## Run locally
 
@@ -17,28 +17,16 @@ pnpm preview
 pnpm lint
 ```
 
-## What is implemented
+## Data source policy
 
-- Interactive monthly calendar with shift + teaching + admin events.
-- Seeded recurring schedule based on the extracted structure:
-  - Day Shift at 08:00 (daily in Feb 2026)
-  - Late Shift at 14:00 (weekday cadence)
-  - Teaching/case blocks at 13:30 (set of recurring topic sessions)
-  - Additional non-shift obligations (resident review, journal club, grading, retreat, rounds, etc.)
-- Day detail panel listing all events for the selected date.
-- Role/legend context included in app UI:
-  - ECC Resident Chief
-  - ECC Teaching
-  - General ECC Service
-- Direct editing workflow for anyone with the URL:
-  - create events from the details panel form
-  - edit events in place
-  - drag and drop events between days to move shifts
-  - copy an editable share link (schedule data stored in URL hash)
-- Built-in command input for quick schedule changes:
-  - `add <title> on YYYY-MM-DD [at HH:MM] [shift|teaching|admin|milestone]`
-  - `remove <title> on YYYY-MM-DD`
-- Local persistence via browser `localStorage` for future scheduling edits.
+- The app ingests schedule data from Teamup only.
+- PDF parsing and PDF-based ingestion pipelines have been removed.
+- If Teamup is unreachable, the UI shows an unavailable warning instead of falling back to local seed data.
+- Local edits are intentionally disabled until Teamup parity/migration is complete.
+
+Optional environment variable:
+
+- `VITE_TEAMUP_CALENDAR_KEY` (defaults to `ks109ec178962cdfa7`)
 
 ## Deployment base path
 
