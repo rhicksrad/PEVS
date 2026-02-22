@@ -10,6 +10,7 @@ import {
   isSameMonth
 } from './lib/date';
 import starterSchedule from './data/starterSchedule.json';
+import { fetchTeamupEvents } from './lib/teamup';
 import { validateSeedSchedule, type SeedEvent } from './lib/seedValidation';
 
 type ScheduleCategory = 'shift' | 'teaching' | 'admin' | 'milestone';
@@ -30,6 +31,7 @@ type ScheduleEvent = {
 type PersistedSchedulePayload = {
   version: number;
   events: ScheduleEvent[];
+  source: 'teamup' | 'fallback';
 };
 
 const STORAGE_KEY = 'pevs-schedule-events-v5';
@@ -95,10 +97,6 @@ function normalizeLoadedEvents(events: ScheduleEvent[]) {
   return sortEvents(events.map(normalizeEvent));
 }
 
-const EVENT_CATEGORY_SET = new Set<ScheduleCategory>(['shift', 'teaching', 'admin', 'milestone']);
-const EVENT_CONTEXT_SET = new Set<string>(EVENT_CONTEXTS);
-const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
-const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 const formatDisplayTime = (time?: string) => {
   if (!time) return 'All day';
@@ -157,116 +155,87 @@ function generateBaseSchedule(): ScheduleEvent[] {
 function makePersistedPayload(events: ScheduleEvent[]): PersistedSchedulePayload {
   return {
     version: CURRENT_SCHEMA_VERSION,
-    events: normalizeLoadedEvents(events)
+    events: normalizeLoadedEvents(events),
+    source: 'fallback'
   };
 }
 
-function isPayloadShape(value: unknown): value is PersistedSchedulePayload {
-  if (!value || typeof value !== 'object') return false;
-  const maybePayload = value as PersistedSchedulePayload;
-  return typeof maybePayload.version === 'number' && Array.isArray(maybePayload.events);
-}
-
-function findCanonicalMatch(event: Partial<ScheduleEvent>, canonicalEvents: ScheduleEvent[]) {
-  const normalizedTitle = typeof event.title === 'string' ? event.title.trim().toLowerCase() : '';
-  return canonicalEvents.find((candidate) => {
-    if (event.id && candidate.id === event.id) return true;
-    const candidateTitle = candidate.title.trim().toLowerCase();
-    return candidate.date === event.date && candidateTitle === normalizedTitle && candidate.startTime === event.startTime;
-  });
-}
-
-function sanitizeStoredEvents(rawEvents: unknown[], canonicalEvents: ScheduleEvent[]): ScheduleEvent[] | null {
-  const sanitized: ScheduleEvent[] = [];
-  const seenIds = new Set<string>();
-
-  for (const entry of rawEvents) {
-    if (!entry || typeof entry !== 'object') return null;
-    const item = entry as Partial<ScheduleEvent>;
-    const canonical = findCanonicalMatch(item, canonicalEvents);
-    const category = typeof item.category === 'string' && EVENT_CATEGORY_SET.has(item.category as ScheduleCategory)
-      ? (item.category as ScheduleCategory)
-      : canonical?.category;
-    const date = typeof item.date === 'string' && DATE_PATTERN.test(item.date) ? item.date : canonical?.date;
-    const title = typeof item.title === 'string' && item.title.trim() ? item.title.trim() : canonical?.title;
-    const context = typeof item.context === 'string' && EVENT_CONTEXT_SET.has(item.context)
-      ? item.context
-      : canonical?.context;
-    const startTime = typeof item.startTime === 'string' && TIME_PATTERN.test(item.startTime) ? item.startTime : canonical?.startTime;
-    const endTime = typeof item.endTime === 'string' && TIME_PATTERN.test(item.endTime) ? item.endTime : canonical?.endTime;
-    const inferredFromMarker = typeof title === 'string' ? getPersonFromMarker(title.match(PERSON_MARKER_PATTERN)?.[1] ?? '') : undefined;
-    const person = typeof item.person === 'string' && isTeamMember(item.person)
-      ? item.person
-      : canonical?.person ?? inferredFromMarker;
-
-    if (!category || !date || !title || !context) return null;
-    if (category === 'shift' && !person) return null;
-
-    const id = typeof item.id === 'string' && item.id.trim() ? item.id : makeId(title, date, startTime);
-    if (seenIds.has(id)) return null;
-
-    seenIds.add(id);
-    sanitized.push(
-      normalizeEvent({
-        id,
-        date,
-        title,
-        startTime,
-        endTime,
-        category,
-        context,
-        person,
-        notes: typeof item.notes === 'string' ? item.notes : undefined
-      })
-    );
-  }
-
-  return sanitized;
-}
-
-function migratePersistedPayload(rawValue: unknown, canonicalEvents: ScheduleEvent[]): PersistedSchedulePayload | null {
-  const rawPayload = Array.isArray(rawValue) ? { version: 4, events: rawValue } : rawValue;
-  if (!isPayloadShape(rawPayload)) return null;
-
-  const sanitizedEvents = sanitizeStoredEvents(rawPayload.events, canonicalEvents);
-  if (!sanitizedEvents || !sanitizedEvents.length) return null;
-
-  return {
-    version: CURRENT_SCHEMA_VERSION,
-    events: normalizeLoadedEvents(sanitizedEvents)
-  };
-}
-
-function readInitialEvents(): ScheduleEvent[] {
-  const canonicalEvents = generateBaseSchedule();
-  const saved = localStorage.getItem(STORAGE_KEY) ?? localStorage.getItem(LEGACY_STORAGE_KEY);
-  if (!saved) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(makePersistedPayload(canonicalEvents)));
-    return canonicalEvents;
-  }
-
-  try {
-    const parsed = JSON.parse(saved) as unknown;
-    const migrated = migratePersistedPayload(parsed, canonicalEvents) ?? makePersistedPayload(canonicalEvents);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
-    localStorage.removeItem(LEGACY_STORAGE_KEY);
-    return migrated.events;
-  } catch {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(makePersistedPayload(canonicalEvents)));
-    localStorage.removeItem(LEGACY_STORAGE_KEY);
-    return canonicalEvents;
-  }
+function convertTeamupEvents(teamupEvents: Awaited<ReturnType<typeof fetchTeamupEvents>>): ScheduleEvent[] {
+  return normalizeLoadedEvents(
+    teamupEvents.map((event) => ({
+      id: makeId(event.title, event.date, event.startTime ?? undefined),
+      date: event.date,
+      title: event.title,
+      startTime: event.startTime,
+      endTime: event.endTime,
+      notes: event.notes,
+      category: 'admin',
+      context: 'General Events',
+      person: getPersonFromMarker(event.title.match(PERSON_MARKER_PATTERN)?.[1] ?? '')
+    }))
+  );
 }
 
 function App() {
   const printableRef = useRef<HTMLDivElement>(null);
-  const [events, setEvents] = useState<ScheduleEvent[]>(() => readInitialEvents());
+  const [events, setEvents] = useState<ScheduleEvent[]>([]);
+  const [isLoadingEvents, setIsLoadingEvents] = useState(true);
+  const [dataSource, setDataSource] = useState<'teamup' | 'fallback'>('fallback');
   const [viewMonth, setViewMonth] = useState(DEFAULT_MONTH);
   const [selectedDate, setSelectedDate] = useState<Date>(DEFAULT_MONTH);
   const [activeEventId, setActiveEventId] = useState<string>('');
   const [selectedPeople, setSelectedPeople] = useState<TeamMember[]>([...TEAM]);
   const [selectedContexts, setSelectedContexts] = useState<EventContext[]>([...EVENT_CONTEXTS]);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
+
+  useEffect(() => {
+    let isCancelled = false;
+    const seedEvents = generateBaseSchedule();
+    const monthGridDays = getCalendarGridDays(viewMonth);
+    const rangeStart = formatIsoDate(monthGridDays[0]);
+    const rangeEnd = formatIsoDate(monthGridDays[monthGridDays.length - 1]);
+
+    const loadEvents = async () => {
+      setIsLoadingEvents(true);
+      try {
+        const fetchedEvents = await fetchTeamupEvents(rangeStart, rangeEnd);
+        const normalized = convertTeamupEvents(fetchedEvents);
+        if (isCancelled) return;
+        setEvents(normalized);
+        setDataSource('teamup');
+        localStorage.setItem(
+          STORAGE_KEY,
+          JSON.stringify({
+            version: CURRENT_SCHEMA_VERSION,
+            events: normalized,
+            source: 'teamup'
+          } satisfies PersistedSchedulePayload)
+        );
+      } catch {
+        if (isCancelled) return;
+        setEvents(seedEvents);
+        setDataSource('fallback');
+        localStorage.setItem(
+          STORAGE_KEY,
+          JSON.stringify({
+            version: CURRENT_SCHEMA_VERSION,
+            events: seedEvents,
+            source: 'fallback'
+          } satisfies PersistedSchedulePayload)
+        );
+      } finally {
+        if (!isCancelled) setIsLoadingEvents(false);
+      }
+
+      localStorage.removeItem(LEGACY_STORAGE_KEY);
+    };
+
+    loadEvents();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [viewMonth]);
 
   useEffect(() => {
     if (!import.meta.env.DEV) return;
@@ -280,8 +249,9 @@ function App() {
   }, [events]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(makePersistedPayload(events)));
-  }, [events]);
+    if (isLoadingEvents) return;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...makePersistedPayload(events), source: dataSource }));
+  }, [events, dataSource, isLoadingEvents]);
 
   const dayMap = useMemo(() => {
     return events.reduce<Record<string, ScheduleEvent[]>>((acc, event) => {
@@ -381,6 +351,7 @@ function App() {
         <div>
           <h1>{formatMonthYear(viewMonth)}</h1>
           <p className="subheading">Full-screen monthly schedule with person filters, color coding, and editable events.</p>
+          <p className="subheading">{isLoadingEvents ? 'Loading Teamup events…' : dataSource === 'teamup' ? 'Live Teamup data' : 'Fallback seed data'}</p>
         </div>
         <div className="calendar-actions">
           <button type="button" onClick={() => setViewMonth(new Date(viewMonth.getFullYear(), viewMonth.getMonth() - 1, 1))}>Prev</button>
