@@ -30,6 +30,7 @@ type ScheduleEvent = {
 const STORAGE_KEY = 'pevs-schedule-events-v5';
 const DEFAULT_MONTH = new Date(2026, 1, 1);
 const TEAM: TeamMember[] = ['Aimee Brooks', 'Ana Aghili', 'Liz Thomovsky', 'Paula Johnson'];
+const PERSON_MARKER_PATTERN = /\(([^)]+)\)/;
 const EVENT_CONTEXTS = ['General ECC Service', 'ECC Teaching', 'General Events'] as const;
 type EventContext = (typeof EVENT_CONTEXTS)[number];
 const PERSON_COLORS: Record<TeamMember, string> = {
@@ -59,6 +60,33 @@ const sortEvents = (events: ScheduleEvent[]) => [...events].sort((a, b) => toSor
 
 const makeId = (title: string, date: string, startTime?: string) =>
   `${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${date}-${startTime ?? 'all-day'}`;
+
+const isTeamMember = (value: string): value is TeamMember => TEAM.includes(value as TeamMember);
+
+function getPersonFromMarker(marker: string): TeamMember | undefined {
+  const normalizedMarker = marker.trim().toLowerCase();
+  return TEAM.find((member) => {
+    const [firstName] = member.split(' ');
+    return member.toLowerCase() === normalizedMarker || firstName.toLowerCase() === normalizedMarker;
+  });
+}
+
+function normalizeEvent(event: ScheduleEvent): ScheduleEvent {
+  const markerMatch = event.title.match(PERSON_MARKER_PATTERN);
+  const markerPerson = markerMatch ? getPersonFromMarker(markerMatch[1]) : undefined;
+  const cleanedTitle = markerMatch ? event.title.replace(markerMatch[0], '').trim() : event.title;
+  const person = event.person && isTeamMember(event.person) ? event.person : markerPerson;
+
+  return {
+    ...event,
+    title: cleanedTitle,
+    person
+  };
+}
+
+function normalizeLoadedEvents(events: ScheduleEvent[]) {
+  return sortEvents(events.map(normalizeEvent));
+}
 
 const formatDisplayTime = (time?: string) => {
   if (!time) return 'All day';
@@ -100,7 +128,7 @@ function generateBaseSchedule(): ScheduleEvent[] {
     validateSeedSchedule(seedEvents);
   }
 
-  return sortEvents(
+  return normalizeLoadedEvents(
     seedEvents.map((event) => ({
       id: makeId(event.title, event.date, event.startTime ?? undefined),
       date: event.date,
@@ -120,7 +148,7 @@ function readInitialEvents(): ScheduleEvent[] {
 
   try {
     const parsed = JSON.parse(saved) as ScheduleEvent[];
-    return parsed.length ? sortEvents(parsed) : generateBaseSchedule();
+    return parsed.length ? normalizeLoadedEvents(parsed) : generateBaseSchedule();
   } catch {
     return generateBaseSchedule();
   }
@@ -135,6 +163,17 @@ function App() {
   const [selectedPeople, setSelectedPeople] = useState<TeamMember[]>([...TEAM]);
   const [selectedContexts, setSelectedContexts] = useState<EventContext[]>([...EVENT_CONTEXTS]);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
+
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+
+    const invalidShift = events.find((event) => event.category === 'shift' && !event.person);
+    if (!invalidShift) return;
+
+    const message = `Shift event missing person assignment: ${invalidShift.id} (${invalidShift.title} on ${invalidShift.date})`;
+    console.error(message, invalidShift);
+    throw new Error(message);
+  }, [events]);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(events));
@@ -176,7 +215,7 @@ function App() {
   const onSaveEvent = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
-    const updated: ScheduleEvent = {
+    const updated = normalizeEvent({
       id: activeEvent?.id ?? makeId(String(formData.get('title')), String(formData.get('date')), String(formData.get('startTime')) || undefined),
       title: String(formData.get('title')),
       date: String(formData.get('date')),
@@ -184,11 +223,12 @@ function App() {
       endTime: String(formData.get('endTime')) || undefined,
       category: String(formData.get('category')) as ScheduleCategory,
       context: String(formData.get('context')),
-      person: (String(formData.get('person')) || undefined) as TeamMember | undefined,
+      person: String(formData.get('person')) || undefined,
       notes: String(formData.get('notes')) || undefined
-    };
+    });
 
     if (!updated.title || !updated.date) return;
+    if (updated.category === 'shift' && !updated.person) return;
 
     if (activeEvent) {
       setEvents(sortEvents(events.map((item) => (item.id === activeEvent.id ? { ...updated, id: makeId(updated.title, updated.date, updated.startTime) } : item))));
@@ -320,7 +360,7 @@ function App() {
                       setActiveEventId(item.id);
                     }}
                   >
-                    <strong>{formatDisplayTime(item.startTime)}</strong> {item.title} {item.person ? `(${item.person.split(' ')[0]})` : ''}
+                    <strong>{formatDisplayTime(item.startTime)}</strong> {item.title}
                   </div>
                 ))}
               </div>
