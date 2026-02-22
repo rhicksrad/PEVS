@@ -1,0 +1,1217 @@
+[
+  {
+    "date": "2026-02-01",
+    "startTime": "08:00",
+    "endTime": "18:00",
+    "title": "Day Shift",
+    "person": "Aimee Brooks",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-02-02",
+    "startTime": "08:00",
+    "endTime": "18:00",
+    "title": "Day Shift",
+    "person": "Ana Aghili",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-02-02",
+    "startTime": "13:30",
+    "endTime": null,
+    "title": "Resp distress",
+    "person": "Liz Thomovsky",
+    "category": "teaching",
+    "context": "ECC Teaching"
+  },
+  {
+    "date": "2026-02-02",
+    "startTime": "14:00",
+    "endTime": "22:00",
+    "title": "Night Shift",
+    "person": "Liz Thomovsky",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-02-03",
+    "startTime": "08:00",
+    "endTime": "18:00",
+    "title": "Day Shift",
+    "person": "Liz Thomovsky",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-02-03",
+    "startTime": "08:30",
+    "endTime": null,
+    "title": "Grade assignment 1?",
+    "person": null,
+    "category": "admin",
+    "context": "General Events"
+  },
+  {
+    "date": "2026-02-03",
+    "startTime": "14:00",
+    "endTime": "22:00",
+    "title": "Night Shift",
+    "person": "Paula Johnson",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-02-03",
+    "startTime": null,
+    "endTime": null,
+    "title": "ICU midblocks",
+    "person": null,
+    "category": "admin",
+    "context": "General Events"
+  },
+  {
+    "date": "2026-02-04",
+    "startTime": "08:00",
+    "endTime": "18:00",
+    "title": "Day Shift",
+    "person": "Paula Johnson",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-02-04",
+    "startTime": "13:30",
+    "endTime": null,
+    "title": "Repro ER",
+    "person": "Liz Thomovsky",
+    "category": "teaching",
+    "context": "ECC Teaching"
+  },
+  {
+    "date": "2026-02-04",
+    "startTime": "14:00",
+    "endTime": "22:00",
+    "title": "Night Shift",
+    "person": "Aimee Brooks",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-02-05",
+    "startTime": "08:00",
+    "endTime": "18:00",
+    "title": "Day Shift",
+    "person": "Aimee Brooks",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-02-05",
+    "startTime": "09:30",
+    "endTime": null,
+    "title": "Resident Review",
+    "person": null,
+    "category": "teaching",
+    "context": "ECC Teaching"
+  },
+  {
+    "date": "2026-02-05",
+    "startTime": "14:00",
+    "endTime": "22:00",
+    "title": "Night Shift",
+    "person": "Ana Aghili",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-02-06",
+    "startTime": "08:00",
+    "endTime": "18:00",
+    "title": "Day Shift",
+    "person": "Ana Aghili",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-02-06",
+    "startTime": "14:00",
+    "endTime": "22:00",
+    "title": "Night Shift",
+    "person": "Liz Thomovsky",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-02-07",
+    "startTime": "08:00",
+    "endTime": "18:00",
+    "title": "Day Shift",
+    "person": "Liz Thomovsky",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-02-08",
+    "startTime": "08:00",
+    "endTime": "18:00",
+    "title": "Day Shift",
+    "person": "Paula Johnson",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-02-09",
+    "startTime": "08:00",
+    "endTime": "18:00",
+    "title": "Day Shift",
+    "person": "Aimee Brooks",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-02-09",
+    "startTime": "13:30",
+    "endTime": null,
+    "title": "Arrhythmia",
+    "person": "Aimee Brooks",
+    "category": "teaching",
+    "context": "ECC Teaching"
+  },
+  {
+    "date": "2026-02-09",
+    "startTime": "14:00",
+    "endTime": "22:00",
+    "title": "Night Shift",
+    "person": "Ana Aghili",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-02-10",
+    "startTime": "08:00",
+    "endTime": "18:00",
+    "title": "Day Shift",
+    "person": "Ana Aghili",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-02-10",
+    "startTime": "14:00",
+    "endTime": "22:00",
+    "title": "Night Shift",
+    "person": "Liz Thomovsky",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-02-11",
+    "startTime": "08:00",
+    "endTime": "18:00",
+    "title": "Day Shift",
+    "person": "Liz Thomovsky",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-02-11",
+    "startTime": "13:30",
+    "endTime": null,
+    "title": "Neonatal ER",
+    "person": "Ana Aghili",
+    "category": "teaching",
+    "context": "ECC Teaching"
+  },
+  {
+    "date": "2026-02-11",
+    "startTime": "14:00",
+    "endTime": "22:00",
+    "title": "Night Shift",
+    "person": "Paula Johnson",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-02-12",
+    "startTime": "08:00",
+    "endTime": "18:00",
+    "title": "Day Shift",
+    "person": "Paula Johnson",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-02-12",
+    "startTime": "09:30",
+    "endTime": null,
+    "title": "Journal club",
+    "person": null,
+    "category": "teaching",
+    "context": "ECC Teaching"
+  },
+  {
+    "date": "2026-02-12",
+    "startTime": "14:00",
+    "endTime": "22:00",
+    "title": "Night Shift",
+    "person": "Aimee Brooks",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-02-13",
+    "startTime": "08:00",
+    "endTime": "18:00",
+    "title": "Day Shift",
+    "person": "Aimee Brooks",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-02-13",
+    "startTime": "14:00",
+    "endTime": "22:00",
+    "title": "Night Shift",
+    "person": "Ana Aghili",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-02-13",
+    "startTime": null,
+    "endTime": null,
+    "title": "ICU grades",
+    "person": null,
+    "category": "admin",
+    "context": "General Events"
+  },
+  {
+    "date": "2026-02-14",
+    "startTime": "08:00",
+    "endTime": "18:00",
+    "title": "Day Shift",
+    "person": "Ana Aghili",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-02-15",
+    "startTime": "08:00",
+    "endTime": "18:00",
+    "title": "Day Shift",
+    "person": "Liz Thomovsky",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-02-16",
+    "startTime": "08:00",
+    "endTime": "18:00",
+    "title": "Day Shift",
+    "person": "Paula Johnson",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-02-16",
+    "startTime": "14:00",
+    "endTime": "22:00",
+    "title": "Night Shift",
+    "person": "Aimee Brooks",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-02-16",
+    "startTime": null,
+    "endTime": null,
+    "title": "Block 14",
+    "person": null,
+    "category": "milestone",
+    "context": "General Events"
+  },
+  {
+    "date": "2026-02-17",
+    "startTime": "08:00",
+    "endTime": "18:00",
+    "title": "Day Shift",
+    "person": "Aimee Brooks",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-02-17",
+    "startTime": "13:30",
+    "endTime": null,
+    "title": "Thermal ER",
+    "person": "Paula Johnson",
+    "category": "teaching",
+    "context": "ECC Teaching"
+  },
+  {
+    "date": "2026-02-17",
+    "startTime": "14:00",
+    "endTime": "22:00",
+    "title": "Night Shift",
+    "person": "Ana Aghili",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-02-18",
+    "startTime": "08:00",
+    "endTime": "18:00",
+    "title": "Day Shift",
+    "person": "Ana Aghili",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-02-18",
+    "startTime": "08:00",
+    "endTime": null,
+    "title": "Intern rounds oxy/vent",
+    "person": null,
+    "category": "teaching",
+    "context": "ECC Teaching"
+  },
+  {
+    "date": "2026-02-18",
+    "startTime": "14:00",
+    "endTime": "22:00",
+    "title": "Night Shift",
+    "person": "Liz Thomovsky",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-02-19",
+    "startTime": "08:00",
+    "endTime": "18:00",
+    "title": "Day Shift",
+    "person": "Liz Thomovsky",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-02-19",
+    "startTime": "13:30",
+    "endTime": null,
+    "title": "A&I pneumo wrap up",
+    "person": null,
+    "category": "teaching",
+    "context": "ECC Teaching"
+  },
+  {
+    "date": "2026-02-19",
+    "startTime": "13:30",
+    "endTime": null,
+    "title": "Bleeding",
+    "person": "Paula Johnson",
+    "category": "teaching",
+    "context": "ECC Teaching"
+  },
+  {
+    "date": "2026-02-19",
+    "startTime": "14:00",
+    "endTime": "22:00",
+    "title": "Night Shift",
+    "person": "Paula Johnson",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-02-19",
+    "startTime": "17:00",
+    "endTime": null,
+    "title": "ECC Grading",
+    "person": null,
+    "category": "admin",
+    "context": "General Events"
+  },
+  {
+    "date": "2026-02-20",
+    "startTime": "08:00",
+    "endTime": "18:00",
+    "title": "Day Shift",
+    "person": "Paula Johnson",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-02-20",
+    "startTime": "08:30",
+    "endTime": null,
+    "title": "Money talks lecture",
+    "person": null,
+    "category": "teaching",
+    "context": "ECC Teaching"
+  },
+  {
+    "date": "2026-02-20",
+    "startTime": "09:30",
+    "endTime": null,
+    "title": "Resident Review",
+    "person": null,
+    "category": "teaching",
+    "context": "ECC Teaching"
+  },
+  {
+    "date": "2026-02-20",
+    "startTime": "14:00",
+    "endTime": "22:00",
+    "title": "Night Shift",
+    "person": "Aimee Brooks",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-02-20",
+    "startTime": "17:00",
+    "endTime": null,
+    "title": "ECC retreat",
+    "person": null,
+    "category": "admin",
+    "context": "General Events"
+  },
+  {
+    "date": "2026-02-21",
+    "startTime": "08:00",
+    "endTime": "18:00",
+    "title": "Day Shift",
+    "person": "Aimee Brooks",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-02-21",
+    "startTime": null,
+    "endTime": null,
+    "title": "ECC midblocks",
+    "person": null,
+    "category": "admin",
+    "context": "General Events"
+  },
+  {
+    "date": "2026-02-22",
+    "startTime": "08:00",
+    "endTime": "18:00",
+    "title": "Day Shift",
+    "person": "Ana Aghili",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-02-23",
+    "startTime": "08:00",
+    "endTime": "18:00",
+    "title": "Day Shift",
+    "person": "Ana Aghili",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-02-23",
+    "startTime": "13:30",
+    "endTime": null,
+    "title": "Endocrine ER",
+    "person": "Aimee Brooks",
+    "category": "teaching",
+    "context": "ECC Teaching"
+  },
+  {
+    "date": "2026-02-23",
+    "startTime": "14:00",
+    "endTime": "22:00",
+    "title": "Night Shift",
+    "person": "Paula Johnson",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-02-23",
+    "startTime": null,
+    "endTime": null,
+    "title": "ICU midblocks",
+    "person": null,
+    "category": "admin",
+    "context": "General Events"
+  },
+  {
+    "date": "2026-02-24",
+    "startTime": "08:00",
+    "endTime": "18:00",
+    "title": "Day Shift",
+    "person": "Paula Johnson",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-02-24",
+    "startTime": "08:00",
+    "endTime": null,
+    "title": "SVECCS ICU rounds",
+    "person": null,
+    "category": "teaching",
+    "context": "ECC Teaching"
+  },
+  {
+    "date": "2026-02-24",
+    "startTime": "14:00",
+    "endTime": "22:00",
+    "title": "Night Shift",
+    "person": "Aimee Brooks",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-02-25",
+    "startTime": "08:00",
+    "endTime": "18:00",
+    "title": "Day Shift",
+    "person": "Aimee Brooks",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-02-25",
+    "startTime": "13:30",
+    "endTime": null,
+    "title": "CHF",
+    "person": "Ana Aghili",
+    "category": "teaching",
+    "context": "ECC Teaching"
+  },
+  {
+    "date": "2026-02-25",
+    "startTime": "14:00",
+    "endTime": "22:00",
+    "title": "Night Shift",
+    "person": "Ana Aghili",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-02-26",
+    "startTime": "08:00",
+    "endTime": "18:00",
+    "title": "Day Shift",
+    "person": "Ana Aghili",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-02-26",
+    "startTime": "09:30",
+    "endTime": null,
+    "title": "Journal club",
+    "person": null,
+    "category": "teaching",
+    "context": "ECC Teaching"
+  },
+  {
+    "date": "2026-02-26",
+    "startTime": "14:00",
+    "endTime": "22:00",
+    "title": "Night Shift",
+    "person": "Liz Thomovsky",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-02-26",
+    "startTime": "17:00",
+    "endTime": null,
+    "title": "Prerecorded lecture to residents",
+    "person": null,
+    "category": "teaching",
+    "context": "ECC Teaching"
+  },
+  {
+    "date": "2026-02-27",
+    "startTime": "08:00",
+    "endTime": "18:00",
+    "title": "Day Shift",
+    "person": "Liz Thomovsky",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-02-27",
+    "startTime": "09:00",
+    "endTime": null,
+    "title": "Grade assignment 2?",
+    "person": null,
+    "category": "admin",
+    "context": "General Events"
+  },
+  {
+    "date": "2026-02-27",
+    "startTime": "14:00",
+    "endTime": "22:00",
+    "title": "Night Shift",
+    "person": "Paula Johnson",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-02-28",
+    "startTime": "08:00",
+    "endTime": "18:00",
+    "title": "Day Shift",
+    "person": "Paula Johnson",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-02-28",
+    "startTime": "08:00",
+    "endTime": null,
+    "title": "SVECCS POCUS lab",
+    "person": null,
+    "category": "teaching",
+    "context": "ECC Teaching"
+  },
+  {
+    "date": "2026-03-01",
+    "startTime": "08:00",
+    "endTime": "18:00",
+    "title": "Day Shift",
+    "person": "Aimee Brooks",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-03-02",
+    "startTime": "08:00",
+    "endTime": "18:00",
+    "title": "Day Shift",
+    "person": "Ana Aghili",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-03-02",
+    "startTime": "13:30",
+    "endTime": null,
+    "title": "Shock rounds",
+    "person": "Aimee Brooks",
+    "category": "teaching",
+    "context": "ECC Teaching"
+  },
+  {
+    "date": "2026-03-02",
+    "startTime": "14:00",
+    "endTime": "22:00",
+    "title": "Night Shift",
+    "person": "Liz Thomovsky",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-03-03",
+    "startTime": "08:00",
+    "endTime": "18:00",
+    "title": "Day Shift",
+    "person": "Liz Thomovsky",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-03-03",
+    "startTime": "14:00",
+    "endTime": "22:00",
+    "title": "Night Shift",
+    "person": "Paula Johnson",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-03-04",
+    "startTime": "08:00",
+    "endTime": "18:00",
+    "title": "Day Shift",
+    "person": "Paula Johnson",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-03-04",
+    "startTime": "14:00",
+    "endTime": "22:00",
+    "title": "Night Shift",
+    "person": "Aimee Brooks",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-03-05",
+    "startTime": "08:00",
+    "endTime": "18:00",
+    "title": "Day Shift",
+    "person": "Aimee Brooks",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-03-05",
+    "startTime": "09:30",
+    "endTime": null,
+    "title": "Resident review",
+    "person": null,
+    "category": "teaching",
+    "context": "ECC Teaching"
+  },
+  {
+    "date": "2026-03-05",
+    "startTime": "14:00",
+    "endTime": "22:00",
+    "title": "Night Shift",
+    "person": "Ana Aghili",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-03-06",
+    "startTime": "08:00",
+    "endTime": "18:00",
+    "title": "Day Shift",
+    "person": "Ana Aghili",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-03-06",
+    "startTime": "14:00",
+    "endTime": "22:00",
+    "title": "Night Shift",
+    "person": "Liz Thomovsky",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-03-07",
+    "startTime": "08:00",
+    "endTime": "18:00",
+    "title": "Day Shift",
+    "person": "Liz Thomovsky",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-03-08",
+    "startTime": "08:00",
+    "endTime": "18:00",
+    "title": "Day Shift",
+    "person": "Paula Johnson",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-03-09",
+    "startTime": "08:00",
+    "endTime": "18:00",
+    "title": "Day Shift",
+    "person": "Aimee Brooks",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-03-09",
+    "startTime": "14:00",
+    "endTime": "22:00",
+    "title": "Night Shift",
+    "person": "Ana Aghili",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-03-10",
+    "startTime": "08:00",
+    "endTime": "18:00",
+    "title": "Day Shift",
+    "person": "Ana Aghili",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-03-10",
+    "startTime": "14:00",
+    "endTime": "22:00",
+    "title": "Night Shift",
+    "person": "Liz Thomovsky",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-03-11",
+    "startTime": "08:00",
+    "endTime": "18:00",
+    "title": "Day Shift",
+    "person": "Liz Thomovsky",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-03-11",
+    "startTime": "14:00",
+    "endTime": "22:00",
+    "title": "Night Shift",
+    "person": "Paula Johnson",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-03-11",
+    "startTime": "17:00",
+    "endTime": null,
+    "title": "ECC grading block 15",
+    "person": null,
+    "category": "admin",
+    "context": "General Events"
+  },
+  {
+    "date": "2026-03-12",
+    "startTime": "08:00",
+    "endTime": "18:00",
+    "title": "Day Shift",
+    "person": "Paula Johnson",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-03-12",
+    "startTime": "14:00",
+    "endTime": "22:00",
+    "title": "Night Shift",
+    "person": "Aimee Brooks",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-03-13",
+    "startTime": "08:00",
+    "endTime": "18:00",
+    "title": "Day Shift",
+    "person": "Aimee Brooks",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-03-13",
+    "startTime": "14:00",
+    "endTime": "22:00",
+    "title": "Night Shift",
+    "person": "Ana Aghili",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-03-14",
+    "startTime": "08:00",
+    "endTime": "18:00",
+    "title": "Day Shift",
+    "person": "Ana Aghili",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-03-15",
+    "startTime": "08:00",
+    "endTime": "18:00",
+    "title": "Day Shift",
+    "person": "Liz Thomovsky",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-03-16",
+    "startTime": "08:00",
+    "endTime": "18:00",
+    "title": "Day Shift",
+    "person": "Paula Johnson",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-03-16",
+    "startTime": "13:30",
+    "endTime": null,
+    "title": "Trauma case conference",
+    "person": "Ana Aghili",
+    "category": "teaching",
+    "context": "ECC Teaching"
+  },
+  {
+    "date": "2026-03-16",
+    "startTime": "14:00",
+    "endTime": "22:00",
+    "title": "Night Shift",
+    "person": "Aimee Brooks",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-03-17",
+    "startTime": "08:00",
+    "endTime": "18:00",
+    "title": "Day Shift",
+    "person": "Aimee Brooks",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-03-17",
+    "startTime": "14:00",
+    "endTime": "22:00",
+    "title": "Night Shift",
+    "person": "Ana Aghili",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-03-18",
+    "startTime": "08:00",
+    "endTime": "18:00",
+    "title": "Day Shift",
+    "person": "Ana Aghili",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-03-18",
+    "startTime": "14:00",
+    "endTime": "22:00",
+    "title": "Night Shift",
+    "person": "Liz Thomovsky",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-03-19",
+    "startTime": "08:00",
+    "endTime": "18:00",
+    "title": "Day Shift",
+    "person": "Liz Thomovsky",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-03-19",
+    "startTime": "14:00",
+    "endTime": "22:00",
+    "title": "Night Shift",
+    "person": "Paula Johnson",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-03-20",
+    "startTime": "08:00",
+    "endTime": "18:00",
+    "title": "Day Shift",
+    "person": "Paula Johnson",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-03-20",
+    "startTime": "14:00",
+    "endTime": "22:00",
+    "title": "Night Shift",
+    "person": "Aimee Brooks",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-03-20",
+    "startTime": null,
+    "endTime": null,
+    "title": "ICU midblocks",
+    "person": null,
+    "category": "admin",
+    "context": "General Events"
+  },
+  {
+    "date": "2026-03-21",
+    "startTime": "08:00",
+    "endTime": "18:00",
+    "title": "Day Shift",
+    "person": "Aimee Brooks",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-03-22",
+    "startTime": "08:00",
+    "endTime": "18:00",
+    "title": "Day Shift",
+    "person": "Ana Aghili",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-03-23",
+    "startTime": "08:00",
+    "endTime": "18:00",
+    "title": "Day Shift",
+    "person": "Liz Thomovsky",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-03-23",
+    "startTime": "14:00",
+    "endTime": "22:00",
+    "title": "Night Shift",
+    "person": "Paula Johnson",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-03-24",
+    "startTime": "08:00",
+    "endTime": "18:00",
+    "title": "Day Shift",
+    "person": "Paula Johnson",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-03-24",
+    "startTime": "08:00",
+    "endTime": null,
+    "title": "Ventilator lab",
+    "person": "Liz Thomovsky",
+    "category": "teaching",
+    "context": "ECC Teaching"
+  },
+  {
+    "date": "2026-03-24",
+    "startTime": "14:00",
+    "endTime": "22:00",
+    "title": "Night Shift",
+    "person": "Aimee Brooks",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-03-25",
+    "startTime": "08:00",
+    "endTime": "18:00",
+    "title": "Day Shift",
+    "person": "Aimee Brooks",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-03-25",
+    "startTime": "14:00",
+    "endTime": "22:00",
+    "title": "Night Shift",
+    "person": "Ana Aghili",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-03-26",
+    "startTime": "08:00",
+    "endTime": "18:00",
+    "title": "Day Shift",
+    "person": "Ana Aghili",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-03-26",
+    "startTime": "14:00",
+    "endTime": "22:00",
+    "title": "Night Shift",
+    "person": "Liz Thomovsky",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-03-27",
+    "startTime": "08:00",
+    "endTime": "18:00",
+    "title": "Day Shift",
+    "person": "Liz Thomovsky",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-03-27",
+    "startTime": "14:00",
+    "endTime": "22:00",
+    "title": "Night Shift",
+    "person": "Paula Johnson",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-03-28",
+    "startTime": "08:00",
+    "endTime": "18:00",
+    "title": "Day Shift",
+    "person": "Paula Johnson",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-03-28",
+    "startTime": "10:00",
+    "endTime": null,
+    "title": "ECC retreat planning",
+    "person": null,
+    "category": "admin",
+    "context": "General Events"
+  },
+  {
+    "date": "2026-03-29",
+    "startTime": "08:00",
+    "endTime": "18:00",
+    "title": "Day Shift",
+    "person": "Aimee Brooks",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-03-30",
+    "startTime": "08:00",
+    "endTime": "18:00",
+    "title": "Day Shift",
+    "person": "Ana Aghili",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-03-30",
+    "startTime": "14:00",
+    "endTime": "22:00",
+    "title": "Night Shift",
+    "person": "Liz Thomovsky",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-03-31",
+    "startTime": "08:00",
+    "endTime": "18:00",
+    "title": "Day Shift",
+    "person": "Liz Thomovsky",
+    "category": "shift",
+    "context": "General ECC Service"
+  },
+  {
+    "date": "2026-03-31",
+    "startTime": "14:00",
+    "endTime": "22:00",
+    "title": "Night Shift",
+    "person": "Paula Johnson",
+    "category": "shift",
+    "context": "General ECC Service"
+  }
+]
