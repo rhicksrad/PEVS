@@ -29,7 +29,7 @@ body { margin: 0; }
 .subheading { margin: 0.2rem 0 0; color: #64748b; }
 .calendar-actions { display: flex; gap: 0.5rem; }
 
-button, input {
+button, input, select {
   border: 1px solid #c8d2df;
   border-radius: 8px;
   padding: 0.5rem 0.75rem;
@@ -69,10 +69,16 @@ button:hover { background: #f3f6fb; }
 .event-list { padding-left: 1rem; margin-top: 0; }
 .event-list li { margin-bottom: 0.5rem; }
 .event-list small { display: block; color: #64748b; }
+.event-list button { margin-top: 0.2rem; }
 
-.assistant-form { margin-top: 1rem; border-top: 1px solid #e2e8f0; padding-top: 0.8rem; }
-.assistant-form label { display: block; margin-bottom: 0.35rem; font-weight: 600; }
-.assistant-form input { width: 100%; margin-bottom: 0.5rem; }
+.assistant-form {
+  margin-top: 1rem;
+  border-top: 1px solid #e2e8f0;
+  padding-top: 0.8rem;
+  display: grid;
+  gap: 0.5rem;
+}
+.assistant-form label { display: block; margin-bottom: 0.1rem; font-weight: 600; }
 .assistant-message { margin: 0.4rem 0 0; color: #1d4ed8; font-size: 0.9rem; }
 
 @media (max-width: 900px) {
