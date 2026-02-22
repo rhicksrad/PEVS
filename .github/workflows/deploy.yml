@@ -36,9 +36,20 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Determine GitHub Pages base path
+        id: base_path
+        run: |
+          REPO_NAME="${GITHUB_REPOSITORY#*/}"
+
+          if [[ "$REPO_NAME" == *.github.io ]]; then
+            echo "base_url=/" >> "$GITHUB_OUTPUT"
+          else
+            echo "base_url=$REPO_NAME" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Build
         env:
-          BASE_URL: ${{ github.event.repository.name }}
+          BASE_URL: ${{ steps.base_path.outputs.base_url }}
         run: pnpm build
 
       - name: Configure Pages

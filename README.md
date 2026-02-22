@@ -26,6 +26,8 @@ Base path selection order:
 - `GITHUB_REPOSITORY` repo name (used automatically in GitHub Actions)
 - `/` fallback for local development
 
+The GitHub Actions workflow also detects `*.github.io` repositories and builds with `/` as the base path, so both project Pages (`/<repo>/`) and user/org Pages (`/`) deploy correctly.
+
 Examples:
 
 ```bash
