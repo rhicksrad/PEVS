@@ -23,6 +23,16 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [react()],
-    base
+    base,
+    server: {
+      proxy: {
+        '/api/teamup': {
+          target: 'https://ics.teamup.com',
+          changeOrigin: true,
+          secure: true,
+          rewrite: (path) => path.replace(/^\/api\/teamup/, '')
+        }
+      }
+    }
   };
 });
