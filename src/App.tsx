@@ -25,9 +25,11 @@ type ScheduleEvent = {
   notes?: string;
 };
 
-const STORAGE_KEY = 'pevs-schedule-events-v4';
+const STORAGE_KEY = 'pevs-schedule-events-v5';
 const DEFAULT_MONTH = new Date(2026, 1, 1);
 const TEAM: TeamMember[] = ['Aimee Brooks', 'Ana Aghili', 'Liz Thomovsky', 'Paula Johnson'];
+const EVENT_CONTEXTS = ['General ECC Service', 'ECC Teaching', 'General Events'] as const;
+type EventContext = (typeof EVENT_CONTEXTS)[number];
 const PERSON_COLORS: Record<TeamMember, string> = {
   'Aimee Brooks': '#2563eb',
   'Ana Aghili': '#f97316',
@@ -119,7 +121,21 @@ function generateBaseSchedule(): ScheduleEvent[] {
     { date: '2026-02-26', title: 'Journal club', startTime: '09:30', category: 'teaching', context: 'ECC Teaching' },
     { date: '2026-02-26', title: 'Prerecorded lecture to residents', startTime: '17:00', category: 'teaching', context: 'ECC Teaching' },
     { date: '2026-02-27', title: 'Grade assignment 2?', startTime: '09:00', category: 'admin', context: 'General Events' },
-    { date: '2026-02-28', title: 'SVECCS POCUS lab', startTime: '08:00', category: 'teaching', context: 'ECC Teaching' }
+    { date: '2026-02-28', title: 'SVECCS POCUS lab', startTime: '08:00', category: 'teaching', context: 'ECC Teaching' },
+    { date: '2026-03-02', title: 'Shock rounds', startTime: '13:30', category: 'teaching', context: 'ECC Teaching', person: 'Aimee Brooks' },
+    { date: '2026-03-05', title: 'Resident review', startTime: '09:30', category: 'teaching', context: 'ECC Teaching' },
+    { date: '2026-03-11', title: 'ECC grading block 15', startTime: '17:00', category: 'admin', context: 'General Events' },
+    { date: '2026-03-16', title: 'Trauma case conference', startTime: '13:30', category: 'teaching', context: 'ECC Teaching', person: 'Ana Aghili' },
+    { date: '2026-03-20', title: 'ICU midblocks', category: 'admin', context: 'General Events' },
+    { date: '2026-03-24', title: 'Ventilator lab', startTime: '08:00', category: 'teaching', context: 'ECC Teaching', person: 'Liz Thomovsky' },
+    { date: '2026-03-28', title: 'ECC retreat planning', startTime: '10:00', category: 'admin', context: 'General Events' },
+    { date: '2026-04-01', title: 'Sepsis rounds', startTime: '13:30', category: 'teaching', context: 'ECC Teaching', person: 'Paula Johnson' },
+    { date: '2026-04-06', title: 'Resident review', startTime: '09:30', category: 'teaching', context: 'ECC Teaching' },
+    { date: '2026-04-09', title: 'Intern rounds', startTime: '08:00', category: 'teaching', context: 'ECC Teaching' },
+    { date: '2026-04-14', title: 'ICU grades due', category: 'admin', context: 'General Events' },
+    { date: '2026-04-17', title: 'ECC case wrap-up', startTime: '13:30', category: 'teaching', context: 'ECC Teaching', person: 'Aimee Brooks' },
+    { date: '2026-04-22', title: 'Simulation lab', startTime: '13:30', category: 'teaching', context: 'ECC Teaching', person: 'Ana Aghili' },
+    { date: '2026-04-29', title: 'End-of-month review', startTime: '16:00', category: 'admin', context: 'General Events' }
   ];
 
   const addShiftBlocksForMonth = (year: number, monthIndex: number) => {
@@ -130,6 +146,9 @@ function generateBaseSchedule(): ScheduleEvent[] {
       const date = formatIsoDate(dateValue);
       const weekDay = dateValue.getDay();
 
+      const dayPerson = TEAM[(day - 1) % TEAM.length];
+      const nightPerson = TEAM[day % TEAM.length];
+
       events.push({
         id: `day-shift-${date}`,
         date,
@@ -137,18 +156,20 @@ function generateBaseSchedule(): ScheduleEvent[] {
         startTime: '08:00',
         endTime: '18:00',
         category: 'shift',
-        context: 'General ECC Service'
+        context: 'General ECC Service',
+        person: dayPerson
       });
 
       if (weekDay >= 1 && weekDay <= 5) {
         events.push({
           id: `late-shift-${date}`,
           date,
-          title: 'Late shift',
+          title: 'Night Shift',
           startTime: '14:00',
           endTime: '22:00',
           category: 'shift',
-          context: 'General ECC Service'
+          context: 'General ECC Service',
+          person: nightPerson
         });
       }
     }
@@ -184,6 +205,7 @@ function App() {
   const [selectedDate, setSelectedDate] = useState<Date>(DEFAULT_MONTH);
   const [activeEventId, setActiveEventId] = useState<string>('');
   const [selectedPeople, setSelectedPeople] = useState<TeamMember[]>([...TEAM]);
+  const [selectedContexts, setSelectedContexts] = useState<EventContext[]>([...EVENT_CONTEXTS]);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
 
   useEffect(() => {
@@ -193,10 +215,11 @@ function App() {
   const dayMap = useMemo(() => {
     return events.reduce<Record<string, ScheduleEvent[]>>((acc, event) => {
       if (event.person && !selectedPeople.includes(event.person)) return acc;
+      if (!selectedContexts.includes(event.context as EventContext)) return acc;
       acc[event.date] = [...(acc[event.date] ?? []), event].sort((a, b) => (a.startTime ?? '99:99').localeCompare(b.startTime ?? '99:99'));
       return acc;
     }, {});
-  }, [events, selectedPeople]);
+  }, [events, selectedPeople, selectedContexts]);
 
   const days = useMemo(() => getCalendarGridDays(viewMonth), [viewMonth]);
   const selectedIsoDate = formatIsoDate(selectedDate);
@@ -208,14 +231,18 @@ function App() {
 
     return TEAM.map((person) => {
       const hours = events
-        .filter((event) => event.person === person && event.date.startsWith(monthPrefix))
+        .filter((event) => event.person === person && event.date.startsWith(monthPrefix) && selectedContexts.includes(event.context as EventContext))
         .reduce((total, event) => total + getEventHours(event), 0);
       return { person, hours };
     });
-  }, [events, viewMonth]);
+  }, [events, viewMonth, selectedContexts]);
 
   const togglePerson = (person: TeamMember) => {
     setSelectedPeople((current) => (current.includes(person) ? current.filter((item) => item !== person) : [...current, person]));
+  };
+
+  const toggleContext = (context: EventContext) => {
+    setSelectedContexts((current) => (current.includes(context) ? current.filter((item) => item !== context) : [...current, context]));
   };
 
   const onSaveEvent = (event: FormEvent<HTMLFormElement>) => {
@@ -310,6 +337,21 @@ function App() {
           {monthlyHours.map(({ person, hours }) => (
             <p key={person}><span style={{ color: PERSON_COLORS[person] }}>●</span> {person}: <strong>{hours.toFixed(1)}h</strong></p>
           ))}
+        </div>
+        <div className="bubble-row">
+          {EVENT_CONTEXTS.map((context) => {
+            const active = selectedContexts.includes(context);
+            return (
+              <button
+                key={context}
+                type="button"
+                className={['person-bubble', active ? 'is-active' : ''].join(' ').trim()}
+                onClick={() => toggleContext(context)}
+              >
+                {context}
+              </button>
+            );
+          })}
         </div>
       </section>
 
