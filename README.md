@@ -17,6 +17,18 @@ pnpm preview
 pnpm lint
 ```
 
+### Local Teamup proxy route
+
+When running `pnpm dev`, Vite now proxies Teamup feed requests from:
+
+- `/api/teamup/feed/{calendarKey}/0.ics`
+
+to Teamup's upstream ICS endpoint:
+
+- `https://ics.teamup.com/feed/{calendarKey}/0.ics`
+
+This prevents local 404s for `/api/teamup/...` and keeps browser requests same-origin while developing.
+
 ## Data source policy
 
 - The app ingests schedule data from Teamup only.
@@ -28,6 +40,10 @@ Optional environment variable:
 
 - `VITE_TEAMUP_CALENDAR_KEY` (defaults to `ks109ec178962cdfa7`)
 - `VITE_TEAMUP_ICS_URL` (defaults in production to `/api/teamup/feed/{calendarKey}/0.ics`)
+
+## Favicon
+
+A bundled favicon is provided at `public/favicon.svg` and wired in `index.html` so browsers stop requesting a missing default `/favicon.ico`.
 
 ## Deployment base path
 
