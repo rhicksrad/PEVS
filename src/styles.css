@@ -51,6 +51,12 @@ body { margin: 0; background: radial-gradient(circle at top, #1f2a44 0%, #0e1525
 
 .weekday-row,
 .calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 0.4rem; }
+.calendar-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 0.75rem;
+  min-height: 0;
+}
 .weekday-cell {
   text-align: center;
   font-weight: 600;
@@ -62,7 +68,7 @@ body { margin: 0; background: radial-gradient(circle at top, #1f2a44 0%, #0e1525
 
 .calendar-grid { min-height: 0; }
 .day-cell {
-  min-height: 15vh;
+  min-height: 12vh;
   text-align: left;
   background: linear-gradient(160deg, rgba(36, 48, 74, 0.86) 0%, rgba(21, 30, 50, 0.86) 100%);
   border: 1px solid #334663;
@@ -86,6 +92,30 @@ body { margin: 0; background: radial-gradient(circle at top, #1f2a44 0%, #0e1525
 }
 .day-selected { border-color: #60a5fa; box-shadow: inset 0 0 0 1px #60a5fa; }
 .day-outside-month { opacity: 0.5; }
+
+.event-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: #60a5fa;
+  margin-top: auto;
+}
+
+.day-sidebar {
+  background: rgba(16, 24, 41, 0.72);
+  border: 1px solid #2f3c56;
+  border-radius: 12px;
+  padding: 0.75rem;
+  display: grid;
+  align-content: start;
+  gap: 0.6rem;
+}
+
+.day-sidebar h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
 
 .insights-shell {
   display: grid;
@@ -158,6 +188,9 @@ button:disabled { opacity: 0.65; cursor: wait; }
 @media (max-width: 980px) {
   .app-shell { grid-template-rows: auto auto 1fr auto; }
   .weekday-row { display: none; }
+  .calendar-layout {
+    grid-template-columns: 1fr;
+  }
   .calendar-grid {
     grid-template-columns: 1fr;
     max-height: 58vh;
@@ -167,5 +200,6 @@ button:disabled { opacity: 0.65; cursor: wait; }
     min-height: 92px;
     max-height: 180px;
   }
+  .day-sidebar { order: -1; }
   .insight-grid { grid-template-columns: 1fr; }
 }
