@@ -54,6 +54,7 @@ const CURRENT_SCHEMA_VERSION = 6;
 const DEFAULT_MONTH = new Date(2026, 1, 1);
 const TEAM: TeamMember[] = ['Aimee Brooks', 'Ana Aghili', 'Liz Thomovsky', 'Paula Johnson'];
 const PERSON_MARKER_PATTERN = /\(([^)]+)\)/;
+const ALPHA_NUMERIC_PATTERN = /[^a-z0-9]+/g;
 const EVENT_CONTEXTS = ['General ECC Service', 'ECC Teaching', 'General Events'] as const;
 type EventContext = (typeof EVENT_CONTEXTS)[number];
 const PERSON_COLORS: Record<TeamMember, string> = {
@@ -82,6 +83,20 @@ const KNOWN_CALENDARS: Record<string, Omit<CalendarMeta, 'label'>> = {
   'ecc resident chief': { color: '#a63a8d', kind: 'other' }
 };
 
+const PERSON_ALIASES: Record<TeamMember, string[]> = {
+  'Aimee Brooks': ['aimee brooks', 'aimee', 'brooks', 'abrooks', 'brooks, aimee', 'a brooks'],
+  'Ana Aghili': ['ana aghili', 'ana', 'aghili', 'aaghili', 'aghili, ana', 'a aghili'],
+  'Liz Thomovsky': ['liz thomovsky', 'liz', 'thomovsky', 'lthomovsky', 'thomovsky, liz', 'l thomovsky'],
+  'Paula Johnson': ['paula johnson', 'paula', 'johnson', 'pjohnson', 'johnson, paula', 'p johnson']
+};
+
+const PERSON_ALIAS_MAP = Object.entries(PERSON_ALIASES).reduce<Record<string, TeamMember>>((map, [member, aliases]) => {
+  aliases.forEach((alias) => {
+    map[normalizeToken(alias)] = member as TeamMember;
+  });
+  return map;
+}, {});
+
 const withAlpha = (hex: string, alpha: number) => {
   const value = hex.replace('#', '');
   const r = Number.parseInt(value.slice(0, 2), 16);
@@ -94,11 +109,29 @@ const toSortKey = (event: ScheduleEvent) => `${event.date}T${event.startTime ?? 
 const sortEvents = (events: ScheduleEvent[]) => [...events].sort((a, b) => toSortKey(a).localeCompare(toSortKey(b)));
 
 function getPersonFromMarker(marker: string): TeamMember | undefined {
-  const normalizedMarker = marker.trim().toLowerCase();
-  return TEAM.find((member) => {
-    const [firstName] = member.split(' ');
-    return member.toLowerCase() === normalizedMarker || firstName.toLowerCase() === normalizedMarker;
+  const normalizedMarker = normalizeToken(marker);
+  return PERSON_ALIAS_MAP[normalizedMarker];
+}
+
+function normalizeToken(value: string): string {
+  return value.trim().toLowerCase().replace(ALPHA_NUMERIC_PATTERN, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function inferOwnerFromText(...values: Array<unknown>): TeamMember | undefined {
+  const normalizedHaystack = values
+    .filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
+    .map(normalizeToken)
+    .join(' ');
+  if (!normalizedHaystack) return undefined;
+
+  const byLongestAlias = Object.keys(PERSON_ALIAS_MAP).sort((a, b) => b.length - a.length);
+  const matchedAlias = byLongestAlias.find((alias) => {
+    const wrappedAlias = ` ${alias} `;
+    const wrappedHaystack = ` ${normalizedHaystack} `;
+    return wrappedHaystack.includes(wrappedAlias);
   });
+
+  return matchedAlias ? PERSON_ALIAS_MAP[matchedAlias] : undefined;
 }
 
 function normalizeEvent(event: ScheduleEvent): ScheduleEvent {
@@ -216,6 +249,20 @@ function convertTeamupEvents(teamupEvents: TeamupEvent[]): ScheduleEvent[] {
       normalizeHexColor(eventRecord.calendar_color) ??
       normalizeHexColor(subcalendar?.color);
     const meta = toCalendarMeta(rawLabel, rawColor);
+    const inferredOwner =
+      meta.person ??
+      inferOwnerFromText(
+        event.title,
+        event.notes,
+        rawLabel,
+        eventRecord.owner,
+        eventRecord.who,
+        eventRecord.owner_name,
+        eventRecord.organizer,
+        eventRecord.organizer_name,
+        eventRecord.created_by,
+        eventRecord.updated_by
+      );
 
     mapped.push({
       id: String(event.id),
@@ -229,7 +276,7 @@ function convertTeamupEvents(teamupEvents: TeamupEvent[]): ScheduleEvent[] {
       notes: event.notes,
       category: 'admin',
       context: meta.context ?? 'General Events',
-      person: meta.person,
+      person: inferredOwner,
       calendarLabel: meta.label,
       calendarColor: meta.color
     });
