@@ -25,6 +25,14 @@ pnpm lint
 - Teamup token and calendar key are injected server-side by the Worker, not exposed in browser code.
 - If the Worker is unreachable, the UI shows a non-intrusive warning banner.
 
+
+## Data mapping policy
+
+- Teamup events are mapped to app schedule events with source metadata (`source`, `calendarLabel`, and context) so validation can identify mapping gaps.
+- Owner/person mapping is validated for Teamup imports. If a Teamup event has no mapped owner and is not in an approved non-person context, the app emits a warning such as: `Owner not mapped for Teamup event "X" (calendar "Y")`.
+- Explicit non-person allowlist contexts are intentionally limited to reduce noise (currently `General Events` and `ECC Resident Chief`).
+- Owner mapping warnings are shown in the in-app validation banner and logged via existing validation issue handling.
+
 ## Favicon
 
 A bundled favicon is provided at `public/favicon.svg` and wired in `index.html` so browsers stop requesting a missing default `/favicon.ico`.
