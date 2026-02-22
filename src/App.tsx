@@ -23,7 +23,7 @@ type ScheduleEvent = {
   notes?: string;
 };
 
-const STORAGE_KEY = 'pevs-schedule-events-v3';
+const STORAGE_KEY = 'pevs-schedule-events-v4';
 const DEFAULT_MONTH = new Date(2026, 1, 1);
 const TEAM: TeamMember[] = ['Aimee Brooks', 'Ana Aghili', 'Liz Thomovsky', 'Paula Johnson'];
 const PERSON_COLORS: Record<TeamMember, string> = {
@@ -47,6 +47,14 @@ const sortEvents = (events: ScheduleEvent[]) => [...events].sort((a, b) => toSor
 const makeId = (title: string, date: string, startTime?: string) =>
   `${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${date}-${startTime ?? 'all-day'}`;
 
+const formatDisplayTime = (time?: string) => {
+  if (!time) return 'All day';
+  const [hours, minutes] = time.split(':').map(Number);
+  const period = hours >= 12 ? 'PM' : 'AM';
+  const hour12 = hours % 12 || 12;
+  return `${hour12}:${String(minutes).padStart(2, '0')} ${period}`;
+};
+
 function hoursBetween(start?: string, end?: string) {
   if (!start || !end) return 0;
   const [startH, startM] = start.split(':').map(Number);
@@ -57,6 +65,36 @@ function hoursBetween(start?: string, end?: string) {
 
 function generateBaseSchedule(): ScheduleEvent[] {
   const events: ScheduleEvent[] = [];
+
+  const supplementalEvents: Omit<ScheduleEvent, 'id'>[] = [
+    { date: '2026-02-02', title: 'Resp distress', startTime: '13:30', category: 'teaching', context: 'ECC Teaching', person: 'Liz Thomovsky' },
+    { date: '2026-02-03', title: 'ICU midblocks', category: 'admin', context: 'General Events' },
+    { date: '2026-02-03', title: 'Grade assignment 1?', startTime: '08:30', category: 'admin', context: 'General Events' },
+    { date: '2026-02-04', title: 'Repro ER', startTime: '13:30', category: 'teaching', context: 'ECC Teaching', person: 'Liz Thomovsky' },
+    { date: '2026-02-05', title: 'Resident Review', startTime: '09:30', category: 'teaching', context: 'ECC Teaching' },
+    { date: '2026-02-09', title: 'Arrhythmia', startTime: '13:30', category: 'teaching', context: 'ECC Teaching', person: 'Aimee Brooks' },
+    { date: '2026-02-11', title: 'Neonatal ER', startTime: '13:30', category: 'teaching', context: 'ECC Teaching', person: 'Ana Aghili' },
+    { date: '2026-02-12', title: 'Journal club', startTime: '09:30', category: 'teaching', context: 'ECC Teaching' },
+    { date: '2026-02-13', title: 'ICU grades', category: 'admin', context: 'General Events' },
+    { date: '2026-02-16', title: 'Block 14', category: 'milestone', context: 'General Events' },
+    { date: '2026-02-17', title: 'Thermal ER', startTime: '13:30', category: 'teaching', context: 'ECC Teaching', person: 'Paula Johnson' },
+    { date: '2026-02-18', title: 'Intern rounds oxy/vent', startTime: '08:00', category: 'teaching', context: 'ECC Teaching' },
+    { date: '2026-02-19', title: 'A&I pneumo wrap up', startTime: '13:30', category: 'teaching', context: 'ECC Teaching' },
+    { date: '2026-02-19', title: 'Bleeding', startTime: '13:30', category: 'teaching', context: 'ECC Teaching', person: 'Paula Johnson' },
+    { date: '2026-02-19', title: 'ECC Grading', startTime: '17:00', category: 'admin', context: 'General Events' },
+    { date: '2026-02-20', title: 'Money talks lecture', startTime: '08:30', category: 'teaching', context: 'ECC Teaching' },
+    { date: '2026-02-20', title: 'Resident Review', startTime: '09:30', category: 'teaching', context: 'ECC Teaching' },
+    { date: '2026-02-20', title: 'ECC retreat', startTime: '17:00', category: 'admin', context: 'General Events' },
+    { date: '2026-02-21', title: 'ECC midblocks', category: 'admin', context: 'General Events' },
+    { date: '2026-02-23', title: 'Endocrine ER', startTime: '13:30', category: 'teaching', context: 'ECC Teaching', person: 'Aimee Brooks' },
+    { date: '2026-02-23', title: 'ICU midblocks', category: 'admin', context: 'General Events' },
+    { date: '2026-02-24', title: 'SVECCS ICU rounds', startTime: '08:00', category: 'teaching', context: 'ECC Teaching' },
+    { date: '2026-02-25', title: 'CHF', startTime: '13:30', category: 'teaching', context: 'ECC Teaching', person: 'Ana Aghili' },
+    { date: '2026-02-26', title: 'Journal club', startTime: '09:30', category: 'teaching', context: 'ECC Teaching' },
+    { date: '2026-02-26', title: 'Prerecorded lecture to residents', startTime: '17:00', category: 'teaching', context: 'ECC Teaching' },
+    { date: '2026-02-27', title: 'Grade assignment 2?', startTime: '09:00', category: 'admin', context: 'General Events' },
+    { date: '2026-02-28', title: 'SVECCS POCUS lab', startTime: '08:00', category: 'teaching', context: 'ECC Teaching' }
+  ];
 
   for (let day = 1; day <= 28; day += 1) {
     const date = formatIsoDate(new Date(2026, 1, day));
@@ -88,6 +126,10 @@ function generateBaseSchedule(): ScheduleEvent[] {
       });
     }
   }
+
+  supplementalEvents.forEach((event) => {
+    events.push({ ...event, id: makeId(event.title, event.date, event.startTime) });
+  });
 
   return sortEvents(events);
 }
@@ -244,7 +286,7 @@ function App() {
                       setActiveEventId(item.id);
                     }}
                   >
-                    <strong>{item.startTime ?? 'All day'}</strong> {item.title} {item.person ? `(${item.person.split(' ')[0]})` : ''}
+                    <strong>{formatDisplayTime(item.startTime)}</strong> {item.title} {item.person ? `(${item.person.split(' ')[0]})` : ''}
                   </div>
                 ))}
               </div>
