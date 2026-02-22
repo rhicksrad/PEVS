@@ -1,4 +1,6 @@
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
+import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
 import {
   WEEKDAY_LABELS,
   formatIsoDate,
@@ -159,11 +161,13 @@ function readInitialEvents(): ScheduleEvent[] {
 }
 
 function App() {
+  const printableRef = useRef<HTMLDivElement>(null);
   const [events, setEvents] = useState<ScheduleEvent[]>(() => readInitialEvents());
   const [viewMonth, setViewMonth] = useState(DEFAULT_MONTH);
   const [selectedDate, setSelectedDate] = useState<Date>(DEFAULT_MONTH);
   const [activeEventId, setActiveEventId] = useState<string>('');
   const [selectedPeople, setSelectedPeople] = useState<TeamMember[]>([...TEAM]);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(events));
@@ -224,8 +228,36 @@ function App() {
     event.currentTarget.reset();
   };
 
+  const downloadDisplayedScreen = async () => {
+    if (!printableRef.current || isExportingPdf) return;
+
+    setIsExportingPdf(true);
+    try {
+      const canvas = await html2canvas(printableRef.current, {
+        scale: window.devicePixelRatio > 1 ? 2 : 1,
+        backgroundColor: '#111827',
+        useCORS: true,
+        scrollX: 0,
+        scrollY: -window.scrollY
+      });
+
+      const image = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({
+        orientation: canvas.width > canvas.height ? 'landscape' : 'portrait',
+        unit: 'px',
+        format: [canvas.width, canvas.height]
+      });
+
+      pdf.addImage(image, 'PNG', 0, 0, canvas.width, canvas.height);
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      pdf.save(`pevs-schedule-${timestamp}.pdf`);
+    } finally {
+      setIsExportingPdf(false);
+    }
+  };
+
   return (
-    <main className="app-shell">
+    <main className="app-shell" ref={printableRef}>
       <header className="calendar-header">
         <div>
           <h1>{formatMonthYear(viewMonth)}</h1>
@@ -236,6 +268,7 @@ function App() {
           <button type="button" onClick={() => setViewMonth(DEFAULT_MONTH)}>Feb 2026</button>
           <button type="button" onClick={() => setViewMonth(new Date(viewMonth.getFullYear(), viewMonth.getMonth() + 1, 1))}>Next</button>
           <button type="button" onClick={() => { setActiveEventId('new'); setSelectedDate(new Date(viewMonth.getFullYear(), viewMonth.getMonth(), 1)); }}>+ New event</button>
+          <button type="button" onClick={downloadDisplayedScreen} disabled={isExportingPdf}>{isExportingPdf ? 'Building PDF…' : 'Download PDF'}</button>
         </div>
       </header>
 
@@ -248,7 +281,7 @@ function App() {
                 key={person}
                 type="button"
                 className={['person-bubble', active ? 'is-active' : ''].join(' ').trim()}
-                style={{ borderColor: PERSON_COLORS[person], color: PERSON_COLORS[person], background: active ? `${PERSON_COLORS[person]}22` : '#fff' }}
+                style={{ borderColor: PERSON_COLORS[person], color: PERSON_COLORS[person], background: active ? `${PERSON_COLORS[person]}33` : 'rgba(15, 23, 42, 0.85)' }}
                 onClick={() => togglePerson(person)}
               >
                 {person}
@@ -292,7 +325,7 @@ function App() {
                     style={{
                       borderLeftColor: item.person ? PERSON_COLORS[item.person] : '#6366f1',
                       background: item.person ? withAlpha(PERSON_COLORS[item.person], 0.18) : '#eef2ff',
-                      color: item.person ? '#1f2937' : '#312e81'
+                      color: '#e2e8f0'
                     }}
                     onClick={(e) => {
                       e.stopPropagation();
