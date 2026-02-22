@@ -134,6 +134,64 @@ function inferOwnerFromText(...values: Array<unknown>): TeamMember | undefined {
   return matchedAlias ? PERSON_ALIAS_MAP[matchedAlias] : undefined;
 }
 
+function extractOwnerCandidates(eventRecord: Record<string, unknown>): TeamMember[] {
+  const candidateTokens = new Set<string>();
+  const collectedPeople = new Set<TeamMember>();
+  const scalarOwnerKeys = ['owner', 'owner_name', 'who', 'organizer', 'organizer_name', 'created_by', 'updated_by'];
+  const nestedOwnerHints = ['owner', 'owners', 'participant', 'participants', 'organizer', 'organizers', 'creator', 'updater', 'who'];
+  const nestedNameKeys = ['name', 'full_name', 'display_name', 'title', 'label'];
+
+  const appendStringValue = (value: unknown) => {
+    if (typeof value !== 'string') return;
+    const normalized = normalizeToken(value);
+    if (!normalized) return;
+    candidateTokens.add(normalized);
+  };
+
+  scalarOwnerKeys.forEach((key) => {
+    appendStringValue(eventRecord[key]);
+  });
+
+  const visited = new Set<unknown>();
+  const inspectNested = (value: unknown, depth = 0) => {
+    if (depth > 4 || value == null || visited.has(value)) return;
+    if (Array.isArray(value)) {
+      visited.add(value);
+      value.forEach((entry) => inspectNested(entry, depth + 1));
+      return;
+    }
+
+    if (typeof value === 'string') {
+      appendStringValue(value);
+      return;
+    }
+
+    if (typeof value !== 'object') return;
+    visited.add(value);
+
+    const record = value as Record<string, unknown>;
+    Object.entries(record).forEach(([key, entry]) => {
+      const normalizedKey = normalizeToken(key);
+      if (nestedOwnerHints.some((hint) => normalizedKey.includes(hint))) {
+        inspectNested(entry, depth + 1);
+      }
+
+      if (nestedNameKeys.includes(normalizedKey)) {
+        appendStringValue(entry);
+      }
+    });
+  };
+
+  inspectNested(eventRecord);
+
+  candidateTokens.forEach((token) => {
+    const person = PERSON_ALIAS_MAP[token];
+    if (person) collectedPeople.add(person);
+  });
+
+  return Array.from(collectedPeople);
+}
+
 function normalizeEvent(event: ScheduleEvent): ScheduleEvent {
   const markerMatch = event.title.match(PERSON_MARKER_PATTERN);
   const markerPerson = markerMatch ? getPersonFromMarker(markerMatch[1]) : undefined;
@@ -232,6 +290,7 @@ function toLocalTime(value?: string) {
 
 function convertTeamupEvents(teamupEvents: TeamupEvent[]): ScheduleEvent[] {
   const mapped: ScheduleEvent[] = [];
+  const shouldDebugUnmatchedOwners = false && import.meta.env.DEV;
 
   teamupEvents.forEach((event) => {
     const date = event.all_day ? event.start_dt.slice(0, 10) : toLocalDateKey(event.start_dt);
@@ -249,8 +308,10 @@ function convertTeamupEvents(teamupEvents: TeamupEvent[]): ScheduleEvent[] {
       normalizeHexColor(eventRecord.calendar_color) ??
       normalizeHexColor(subcalendar?.color);
     const meta = toCalendarMeta(rawLabel, rawColor);
+    const ownerCandidates = extractOwnerCandidates(eventRecord);
     const inferredOwner =
       meta.person ??
+      ownerCandidates[0] ??
       inferOwnerFromText(
         event.title,
         event.notes,
@@ -263,6 +324,15 @@ function convertTeamupEvents(teamupEvents: TeamupEvent[]): ScheduleEvent[] {
         eventRecord.created_by,
         eventRecord.updated_by
       );
+
+    if (shouldDebugUnmatchedOwners && !inferredOwner) {
+      console.debug('Teamup event owner unmatched', {
+        id: event.id,
+        title: event.title,
+        keys: Object.keys(eventRecord),
+        ownerCandidates
+      });
+    }
 
     mapped.push({
       id: String(event.id),
