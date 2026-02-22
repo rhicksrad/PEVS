@@ -142,6 +142,20 @@ function buildExplicitTeamupEndpoint(template: string | undefined, calendarKey: 
   return value;
 }
 
+function normalizeRuntimeBasePath(value: string | undefined) {
+  const trimmed = value?.trim();
+
+  if (!trimmed || trimmed === '/' || trimmed === './') {
+    return '/';
+  }
+
+  if (!trimmed.startsWith('/')) {
+    return '/';
+  }
+
+  return trimmed.endsWith('/') ? trimmed : `${trimmed}/`;
+}
+
 function isTeamupProxyEndpoint(candidate: string) {
   if (candidate.startsWith('/api/teamup/')) return true;
 
@@ -192,14 +206,14 @@ function mapIcsEventToScheduleEvent(event: ParsedIcsEvent): TeamupMappedEvent | 
 
 export async function fetchTeamupEvents(rangeStart: string, rangeEnd: string): Promise<TeamupMappedEvent[]> {
   const calendarKey = import.meta.env.VITE_TEAMUP_CALENDAR_KEY ?? 'ks109ec178962cdfa7';
-  const basePath = import.meta.env.BASE_URL || '/';
-  const normalizedBasePath = basePath.endsWith('/') ? basePath : `${basePath}/`;
-  const endpoint = `${normalizedBasePath}api/teamup/feed/${calendarKey}/0.ics`;
+  const normalizedBasePath = normalizeRuntimeBasePath(import.meta.env.BASE_URL);
+  const rootEndpoint = `/api/teamup/feed/${calendarKey}/0.ics`;
+  const baseEndpoint = `${normalizedBasePath}api/teamup/feed/${calendarKey}/0.ics`;
   const explicitEndpoint = buildExplicitTeamupEndpoint(
     import.meta.env.VITE_TEAMUP_ICS_URL ?? '/api/teamup/feed/{calendarKey}/0.ics',
     calendarKey
   );
-  const endpoints = [explicitEndpoint, endpoint]
+  const endpoints = [explicitEndpoint, rootEndpoint, baseEndpoint]
     .filter((candidate): candidate is string => Boolean(candidate))
     .filter((candidate) => isTeamupProxyEndpoint(candidate))
     .filter((candidate, index, list) => list.indexOf(candidate) === index);
