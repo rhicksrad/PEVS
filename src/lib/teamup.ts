@@ -130,6 +130,17 @@ function parsePublicIcsEvents(ics: string): ParsedIcsEvent[] {
   return events;
 }
 
+
+function buildExplicitTeamupEndpoint(template: string | undefined, calendarKey: string) {
+  const value = template?.trim();
+  if (!value) return undefined;
+
+  if (value.includes('{calendarKey}')) {
+    return value.split('{calendarKey}').join(encodeURIComponent(calendarKey));
+  }
+
+  return value;
+}
 function mapIcsEventToScheduleEvent(event: ParsedIcsEvent): TeamupMappedEvent | null {
   const rawTitle = typeof event.summary === 'string' ? event.summary.trim() : '';
   if (!rawTitle || !event.dtstart) return null;
@@ -165,8 +176,11 @@ export async function fetchTeamupEvents(rangeStart: string, rangeEnd: string): P
   const normalizedBasePath = basePath.endsWith('/') ? basePath : `${basePath}/`;
   const endpoint = `${normalizedBasePath}api/teamup/feed/${calendarKey}/0.ics`;
   const directEndpoint = `https://ics.teamup.com/feed/${calendarKey}/0.ics`;
-  const explicitEndpoint = import.meta.env.VITE_TEAMUP_ICS_URL?.trim();
-  const endpoints = [endpoint, directEndpoint, explicitEndpoint]
+  const explicitEndpoint = buildExplicitTeamupEndpoint(
+    import.meta.env.VITE_TEAMUP_ICS_URL ?? '/api/teamup/feed/{calendarKey}/0.ics',
+    calendarKey
+  );
+  const endpoints = [explicitEndpoint, endpoint, directEndpoint]
     .filter((candidate): candidate is string => Boolean(candidate))
     .filter((candidate, index, list) => list.indexOf(candidate) === index);
 
