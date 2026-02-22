@@ -63,6 +63,18 @@ function hoursBetween(start?: string, end?: string) {
   return total > 0 ? total / 60 : 0;
 }
 
+function getEventHours(event: ScheduleEvent) {
+  if (event.startTime && event.endTime) {
+    return hoursBetween(event.startTime, event.endTime);
+  }
+
+  if (event.category === 'shift') {
+    return 8;
+  }
+
+  return event.startTime ? 1 : 0;
+}
+
 function generateBaseSchedule(): ScheduleEvent[] {
   const events: ScheduleEvent[] = [];
 
@@ -171,13 +183,15 @@ function App() {
   const activeEvent = events.find((event) => event.id === activeEventId);
 
   const monthlyHours = useMemo(() => {
+    const monthPrefix = `${viewMonth.getFullYear()}-${String(viewMonth.getMonth() + 1).padStart(2, '0')}`;
+
     return TEAM.map((person) => {
       const hours = events
-        .filter((event) => event.person === person && event.category === 'shift' && event.date.startsWith('2026-02'))
-        .reduce((total, event) => total + hoursBetween(event.startTime, event.endTime), 0);
+        .filter((event) => event.person === person && event.date.startsWith(monthPrefix))
+        .reduce((total, event) => total + getEventHours(event), 0);
       return { person, hours };
     });
-  }, [events]);
+  }, [events, viewMonth]);
 
   const togglePerson = (person: TeamMember) => {
     setSelectedPeople((current) => (current.includes(person) ? current.filter((item) => item !== person) : [...current, person]));
