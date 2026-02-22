@@ -1,10 +1,15 @@
-export type TeamupNormalizedEvent = {
+export type TeamupMappedEvent = {
   id: string;
+  externalId: string;
+  source: 'teamup';
   date: string;
   title: string;
   startTime?: string;
   endTime?: string;
   notes?: string;
+  category: 'admin';
+  context: 'General Events';
+  person?: 'Aimee Brooks' | 'Ana Aghili' | 'Liz Thomovsky' | 'Paula Johnson';
 };
 
 type TeamupEventDateTime = {
@@ -27,6 +32,13 @@ type TeamupApiResponse = {
 
 const TEAMUP_API_BASE = 'https://api.teamup.com';
 const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const DISPLAY_MARKER_PATTERN = /\(([^)]+)\)/;
+const TEAM_MEMBERS = ['Aimee Brooks', 'Ana Aghili', 'Liz Thomovsky', 'Paula Johnson'] as const;
+
+type TeamMember = (typeof TEAM_MEMBERS)[number];
+
+const makeId = (title: string, date: string, startTime?: string) =>
+  `${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${date}-${startTime ?? 'all-day'}`;
 
 function toIsoDate(value: string) {
   if (DATE_ONLY_PATTERN.test(value)) return value;
@@ -42,28 +54,49 @@ function toTime(value?: string) {
   return parsed.toISOString().slice(11, 16);
 }
 
-function normalizeTeamupEvent(event: TeamupApiEvent): TeamupNormalizedEvent | null {
-  const title = typeof event.title === 'string' ? event.title.trim() : '';
+function getPersonFromMarker(marker: string): TeamMember | undefined {
+  const normalizedMarker = marker.trim().toLowerCase();
+  return TEAM_MEMBERS.find((member) => {
+    const [firstName] = member.split(' ');
+    return member.toLowerCase() === normalizedMarker || firstName.toLowerCase() === normalizedMarker;
+  });
+}
+
+function stripDisplayMarkers(title: string) {
+  return title.replace(DISPLAY_MARKER_PATTERN, '').trim();
+}
+
+function mapTeamupEventToScheduleEvent(event: TeamupApiEvent): TeamupMappedEvent | null {
+  const rawTitle = typeof event.title === 'string' ? event.title.trim() : '';
   const rawStart = event.start_dt?.datetime ?? event.start_dt?.date;
-  if (!title || !rawStart) return null;
+  if (!rawTitle || !rawStart) return null;
 
   const date = toIsoDate(rawStart);
   if (!date) return null;
 
+  const markerMatch = rawTitle.match(DISPLAY_MARKER_PATTERN);
+  const person = markerMatch ? getPersonFromMarker(markerMatch[1]) : undefined;
+  const title = stripDisplayMarkers(rawTitle);
   const startTime = event.all_day ? undefined : toTime(event.start_dt?.datetime ?? event.start_dt?.date);
   const endTime = event.all_day ? undefined : toTime(event.end_dt?.datetime ?? event.end_dt?.date);
+  const externalId = String(event.id ?? makeId(title, date, startTime));
 
   return {
-    id: String(event.id ?? `${title}-${date}-${startTime ?? 'all-day'}`),
+    id: makeId(title, date, startTime),
+    externalId,
+    source: 'teamup',
     date,
     title,
     startTime,
     endTime,
-    notes: typeof event.notes === 'string' ? event.notes : undefined
+    notes: typeof event.notes === 'string' ? event.notes : undefined,
+    category: 'admin',
+    context: 'General Events',
+    person
   };
 }
 
-export async function fetchTeamupEvents(rangeStart: string, rangeEnd: string): Promise<TeamupNormalizedEvent[]> {
+export async function fetchTeamupEvents(rangeStart: string, rangeEnd: string): Promise<TeamupMappedEvent[]> {
   const calendarKey = import.meta.env.VITE_TEAMUP_CALENDAR_KEY;
   const apiToken = import.meta.env.VITE_TEAMUP_API_TOKEN;
 
@@ -90,6 +123,6 @@ export async function fetchTeamupEvents(rangeStart: string, rangeEnd: string): P
   const events = Array.isArray(payload.events) ? payload.events : [];
 
   return events
-    .map((event) => normalizeTeamupEvent(event))
-    .filter((event): event is TeamupNormalizedEvent => event !== null);
+    .map((event) => mapTeamupEventToScheduleEvent(event))
+    .filter((event): event is TeamupMappedEvent => event !== null);
 }
