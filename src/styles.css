@@ -1,7 +1,7 @@
 :root {
   font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
   color: #1f2937;
-  background-color: #f6f7fb;
+  background-color: #f3f5f9;
   line-height: 1.4;
 }
 
@@ -20,20 +20,20 @@ body {
 }
 
 .app-shell {
-  max-width: 1100px;
+  max-width: 1400px;
   margin: 0 auto;
   display: grid;
-  grid-template-columns: 1fr 280px;
+  grid-template-columns: 1.15fr 1fr;
   gap: 1rem;
 }
 
 .calendar-panel,
-.sidebar {
-  background: #ffffff;
+.pdf-panel {
+  background: #fff;
   border: 1px solid #dbe2ea;
   border-radius: 12px;
   padding: 1rem;
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
 }
 
 .calendar-header {
@@ -41,23 +41,25 @@ body {
   justify-content: space-between;
   align-items: center;
   gap: 0.75rem;
-  margin-bottom: 1rem;
+  margin-bottom: 0.75rem;
 }
 
 .calendar-header h1,
-.sidebar h2 {
+.details-panel h2 {
   margin: 0;
-  font-size: 1.25rem;
+  font-size: 1.2rem;
 }
 
-.calendar-actions {
+.calendar-actions,
+.pdf-toolbar {
   display: flex;
   gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 button {
   border: 1px solid #c8d2df;
-  background: #ffffff;
+  background: #fff;
   color: inherit;
   border-radius: 8px;
   padding: 0.45rem 0.75rem;
@@ -69,9 +71,19 @@ button:hover {
   background: #f3f6fb;
 }
 
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
 button:focus-visible {
   outline: 3px solid #6ca8ff;
   outline-offset: 1px;
+}
+
+.range-text {
+  margin: 0 0 0.75rem;
+  color: #475569;
 }
 
 .weekday-row,
@@ -89,7 +101,7 @@ button:focus-visible {
   text-align: center;
   font-weight: 600;
   color: #556074;
-  font-size: 0.9rem;
+  font-size: 0.88rem;
   padding: 0.25rem;
 }
 
@@ -98,12 +110,19 @@ button:focus-visible {
   text-align: left;
   border-radius: 10px;
   border: 1px solid #dde4ee;
-  padding: 0.45rem;
+  padding: 0.4rem;
   background: #fcfdff;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
 }
 
-.day-cell span {
-  font-weight: 500;
+.entry-dot {
+  margin-top: 0.1rem;
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 999px;
+  background: #2563eb;
 }
 
 .day-outside-month {
@@ -122,29 +141,80 @@ button:focus-visible {
   box-shadow: inset 0 0 0 1px #3b82f6;
 }
 
-.selected-text {
-  margin-top: 0.5rem;
+.details-panel {
+  margin-top: 0.9rem;
+  border-top: 1px solid #e2e8f0;
+  padding-top: 0.9rem;
+}
+
+.details-panel h3 {
+  margin-bottom: 0.4rem;
+}
+
+.details-panel ul,
+.details-panel ol {
+  margin-top: 0;
+  padding-left: 1.1rem;
+}
+
+.entry-raw {
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.pdf-toolbar {
+  margin-bottom: 0.8rem;
+  align-items: center;
+}
+
+.pdf-scroll {
+  height: calc(100vh - 160px);
+  overflow: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 0.75rem;
+  background: #f8fafc;
+}
+
+.pdf-page {
   margin-bottom: 1rem;
 }
 
-.sidebar ul {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 0.5rem;
+.pdf-page-label {
+  margin: 0 0 0.35rem;
+  font-size: 0.85rem;
+  color: #475569;
 }
 
-.sidebar li {
-  border: 1px solid #dde4ee;
-  border-radius: 8px;
-  padding: 0.6rem 0.75rem;
-  background: #f9fbff;
+.pdf-canvas {
+  width: 100%;
+  height: auto;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  display: block;
+  background: #fff;
 }
 
-@media (max-width: 900px) {
+.error-banner {
+  grid-column: 1 / -1;
+  color: #b91c1c;
+}
+
+@media (max-width: 980px) {
   .app-shell {
     grid-template-columns: 1fr;
+  }
+
+  .calendar-panel {
+    order: 1;
+  }
+
+  .pdf-panel {
+    order: 2;
+  }
+
+  .pdf-scroll {
+    height: 60vh;
   }
 
   .calendar-header {
@@ -160,30 +230,33 @@ button:focus-visible {
   }
 
   .calendar-panel,
-  .sidebar,
+  .pdf-panel,
   button,
-  .day-cell {
+  .day-cell,
+  .pdf-canvas {
     background: #111827;
     border-color: #334155;
     color: inherit;
   }
 
+  .pdf-scroll,
   .day-outside-month {
     background: #0b1224;
-    color: #7d8ca3;
   }
 
-  .weekday-cell {
+  .weekday-cell,
+  .entry-raw,
+  .pdf-page-label,
+  .range-text {
     color: #9fb0c6;
+  }
+
+  .details-panel {
+    border-color: #334155;
   }
 
   button:hover {
     background: #1f2937;
-  }
-
-  .sidebar li {
-    background: #0b1224;
-    border-color: #334155;
   }
 
   .day-selected {
