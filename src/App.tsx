@@ -33,6 +33,14 @@ const PERSON_COLORS: Record<TeamMember, string> = {
   'Paula Johnson': '#f97316'
 };
 
+const withAlpha = (hex: string, alpha: number) => {
+  const value = hex.replace('#', '');
+  const r = Number.parseInt(value.slice(0, 2), 16);
+  const g = Number.parseInt(value.slice(2, 4), 16);
+  const b = Number.parseInt(value.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+};
+
 const toSortKey = (event: ScheduleEvent) => `${event.date}T${event.startTime ?? '99:99'}`;
 const sortEvents = (events: ScheduleEvent[]) => [...events].sort((a, b) => toSortKey(a).localeCompare(toSortKey(b)));
 
@@ -225,7 +233,11 @@ function App() {
                   <div
                     key={item.id}
                     className="event-chip"
-                    style={{ borderLeftColor: item.person ? PERSON_COLORS[item.person] : '#6366f1' }}
+                    style={{
+                      borderLeftColor: item.person ? PERSON_COLORS[item.person] : '#6366f1',
+                      background: item.person ? withAlpha(PERSON_COLORS[item.person], 0.18) : '#eef2ff',
+                      color: item.person ? '#1f2937' : '#312e81'
+                    }}
                     onClick={(e) => {
                       e.stopPropagation();
                       setSelectedDate(day);
