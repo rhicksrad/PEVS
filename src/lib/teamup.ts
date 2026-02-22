@@ -161,7 +161,7 @@ function mapIcsEventToScheduleEvent(event: ParsedIcsEvent): TeamupMappedEvent | 
 
 export async function fetchTeamupEvents(rangeStart: string, rangeEnd: string): Promise<TeamupMappedEvent[]> {
   const calendarKey = import.meta.env.VITE_TEAMUP_CALENDAR_KEY ?? 'ks109ec178962cdfa7';
-  const endpoint = `https://ics.teamup.com/feed/${calendarKey}/events.ics`;
+  const endpoint = `/api/teamup/feed/${calendarKey}/0.ics`;
 
   const response = await fetch(endpoint, {
     headers: {
