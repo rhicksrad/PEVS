@@ -3,6 +3,9 @@ export type ScheduleValidationEvent = {
   date: string;
   title: string;
   category: string;
+  source?: string;
+  context?: string;
+  calendarLabel?: string;
   startTime?: string;
   endTime?: string;
   person?: string;
@@ -15,6 +18,7 @@ export type ScheduleValidationResult = {
 
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_PATTERN = /^([01]\d|2[0-3]):([0-5]\d)$/;
+const TEAMUP_NON_PERSON_ALLOWLIST_CONTEXTS = new Set(['General Events', 'ECC Resident Chief']);
 
 const toMinutes = (time: string) => {
   const [hour, minute] = time.split(':').map(Number);
@@ -45,6 +49,17 @@ export function validateScheduleEvents(events: ScheduleValidationEvent[]): Sched
 
     if (event.category === 'shift' && !event.person?.trim()) {
       issues.push(`[${event.id}] Shift event missing required person`);
+    }
+
+    if (
+      event.source === 'teamup' &&
+      !event.person?.trim() &&
+      !TEAMUP_NON_PERSON_ALLOWLIST_CONTEXTS.has(event.context ?? event.calendarLabel ?? '')
+    ) {
+      const calendar = event.calendarLabel ?? event.context ?? 'Unknown calendar';
+      issues.push(
+        `[${event.id}] Owner not mapped for Teamup event "${event.title || 'Untitled event'}" (calendar "${calendar}")`
+      );
     }
 
     if (event.startTime && !TIME_PATTERN.test(event.startTime)) {
