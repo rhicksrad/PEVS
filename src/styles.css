@@ -49,6 +49,7 @@ body { margin: 0; background: radial-gradient(circle at top, #1f2a44 0%, #0e1525
 .bubble-row { display: flex; gap: 0.45rem; flex-wrap: wrap; }
 .person-bubble { border-radius: 999px; font-weight: 600; }
 
+
 .weekday-row,
 .calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 0.4rem; }
 .calendar-layout {

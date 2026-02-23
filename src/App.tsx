@@ -82,6 +82,11 @@ const LEGEND_CALENDARS: CalendarMeta[] = [
   { label: 'Paula Johnson', color: '#2d56b3', kind: 'person', person: 'Paula Johnson' }
 ];
 
+const FILTER_COLORS: Record<string, string> = LEGEND_CALENDARS.reduce((map, item) => {
+  map[item.label] = item.color;
+  return map;
+}, {} as Record<string, string>);
+
 const KNOWN_CALENDARS: Record<string, Omit<CalendarMeta, 'label'>> = {
   'aimee brooks': { color: '#5b2c91', kind: 'person', person: 'Aimee Brooks' },
   'ana aghili': { color: '#f47a20', kind: 'person', person: 'Ana Aghili' },
@@ -636,8 +641,8 @@ function App() {
   }, [insightEvents, insightDays]);
 
   const togglePerson = (person: TeamMember) => setSelectedPeople((current) => (current.includes(person) ? current.filter((item) => item !== person) : [...current, person]));
-  const toggleContext = (context: string) => setSelectedContexts((current) => (current.includes(context) ? current.filter((item) => item !== context) : [...current, context]));
   const toggleCalendar = (label: string) => setSelectedCalendars((current) => (current.includes(label) ? current.filter((item) => item !== label) : [...current, label]));
+  const toggleContext = (context: string) => setSelectedContexts((current) => (current.includes(context) ? current.filter((item) => item !== context) : [...current, context]));
 
   const downloadDisplayedScreen = async () => {
     if (!printableRef.current || isExportingPdf) return;
@@ -666,8 +671,8 @@ function App() {
       {validationIssues.length > 0 && <div className="warning-banner" role="status"><strong>Schedule warnings:</strong> {validationIssues.length} issue(s) detected. Resolve owner mapping for Teamup events when applicable.{validationIssues.length > 0 && <ul>{validationIssues.slice(0, 3).map((issue) => <li key={issue}>{issue}</li>)}{validationIssues.length > 3 && <li>+{validationIssues.length - 3} more issue(s) in console.</li>}</ul>}</div>}
       {loadError && <div className="warning-banner" role="status"><strong>Unable to load events:</strong> {loadError}</div>}
       {calendarLegend.length > 0 && <div className="bubble-row">{calendarLegend.map((calendar) => { const active = selectedCalendars.includes(calendar.label); return <button key={calendar.label} type="button" className={['person-bubble', active ? 'is-active' : ''].join(' ').trim()} style={{ borderColor: calendar.color, color: calendar.color, background: active ? `${calendar.color}33` : 'rgba(15, 23, 42, 0.85)' }} onClick={() => toggleCalendar(calendar.label)}>{calendar.label}</button>; })}</div>}
-      <div className="bubble-row">{TEAM.map((person) => { const active = selectedPeople.includes(person); return <button key={person} type="button" className={['person-bubble', active ? 'is-active' : ''].join(' ').trim()} style={{ borderColor: PERSON_COLORS[person], color: PERSON_COLORS[person], background: active ? `${PERSON_COLORS[person]}33` : 'rgba(15, 23, 42, 0.85)' }} onClick={() => togglePerson(person)}>{person}</button>; })}</div>
-      <div className="bubble-row">{availableContexts.map((context) => { const active = selectedContexts.includes(context); return <button key={context} type="button" className={['person-bubble', active ? 'is-active' : ''].join(' ').trim()} onClick={() => toggleContext(context)}>{context}</button>; })}</div>
+      <div className="bubble-row">{TEAM.map((person) => { const active = selectedPeople.includes(person); const color = FILTER_COLORS[person] ?? PERSON_COLORS[person]; return <button key={person} type="button" className={['person-bubble', active ? 'is-active' : ''].join(' ').trim()} style={{ borderColor: color, color, background: active ? `${color}33` : 'rgba(15, 23, 42, 0.85)' }} onClick={() => togglePerson(person)}>{person}</button>; })}</div>
+      <div className="bubble-row">{availableContexts.map((context) => { const active = selectedContexts.includes(context); const color = FILTER_COLORS[context]; return <button key={context} type="button" className={['person-bubble', active ? 'is-active' : ''].join(' ').trim()} style={color ? { borderColor: color, color, background: active ? `${color}33` : 'rgba(15, 23, 42, 0.85)' } : undefined} onClick={() => toggleContext(context)}>{context}</button>; })}</div>
     </section>
 
     {view === 'calendar' ? <>
