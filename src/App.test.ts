@@ -115,4 +115,33 @@ describe('getLateToEarlyShiftCounts', () => {
 
     expect(counts.find((item) => item.label === 'Liz Thomovsky')?.value).toBe(1);
   });
+
+  it('counts turnarounds using shift start times when title does not contain AM/PM hints', () => {
+    const counts = getLateToEarlyShiftCounts([
+      {
+        id: 'evt-5',
+        source: 'teamup',
+        date: '2026-02-10',
+        title: 'ECC coverage',
+        startTime: '17:00',
+        endTime: '23:00',
+        person: 'Aimee Brooks',
+        category: 'shift',
+        context: 'General ECC Service'
+      },
+      {
+        id: 'evt-6',
+        source: 'teamup',
+        date: '2026-02-11',
+        title: 'ECC coverage',
+        startTime: '07:00',
+        endTime: '13:00',
+        person: 'Aimee Brooks',
+        category: 'shift',
+        context: 'General ECC Service'
+      }
+    ]);
+
+    expect(counts.find((item) => item.label === 'Aimee Brooks')?.value).toBe(1);
+  });
 });
