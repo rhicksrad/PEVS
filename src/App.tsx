@@ -702,7 +702,10 @@ function App() {
           <h2>{formatIsoDate(selectedDate)}</h2>
           {selectedDateApiEvents.length === 0 ? <p className="chart-empty">No events from API for this day.</p> : <div className="day-events">{selectedDateApiEvents.map((item) => {
             const apiEventTime = item.all_day ? 'All day' : formatDisplayTime(toLocalTime(item.start_dt));
-            const subcalendarText = item.subcalendar_id ? ` • subcalendar ${item.subcalendar_id}` : '';
+            const trimmedSubcalendarName = typeof item.subcalendar_name === 'string' ? item.subcalendar_name.trim() : '';
+            const mappedSubcalendarLabel = item.subcalendar_id ? SUBCALENDAR_ID_TO_LABEL[item.subcalendar_id] : undefined;
+            const resolvedSubcalendarLabel = trimmedSubcalendarName || mappedSubcalendarLabel || (item.subcalendar_id ? `subcalendar ${item.subcalendar_id}` : '');
+            const subcalendarText = resolvedSubcalendarLabel ? ` • ${resolvedSubcalendarLabel}` : '';
             return <div key={`${item.id}-${item.start_dt}-sidebar`} className="event-chip" style={{ borderLeftColor: '#38bdf8', background: withAlpha('#38bdf8', 0.22), color: '#e2e8f0' }}><strong>{apiEventTime}</strong> {item.title}<br /><small>ID {item.id}{subcalendarText}</small></div>;
           })}</div>}
         </aside>
