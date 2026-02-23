@@ -113,8 +113,10 @@ const PERSON_ALIAS_MAP = Object.entries(PERSON_ALIASES).reduce<Record<string, Te
   });
   return map;
 }, {});
-const LATE_SHIFT_PATTERN = /\blate\b/i;
-const EARLY_SHIFT_PATTERN = /\bearly\b/i;
+const LATE_SHIFT_PATTERN = /\b(late|evening|night)\b/i;
+const EARLY_SHIFT_PATTERN = /\b(early|morning)\b/i;
+const PM_SHIFT_PATTERN = /\bpm\b/i;
+const AM_SHIFT_PATTERN = /\bam\b/i;
 
 const withAlpha = (hex: string, alpha: number) => {
   const value = hex.replace('#', '');
@@ -474,19 +476,29 @@ function getNextIsoDate(date: string) {
   return formatIsoDate(nextDate);
 }
 
-function getLateToEarlyShiftCounts(events: ScheduleEvent[]) {
+function isLateShiftEvent(event: ScheduleEvent) {
+  const descriptor = [event.title, event.notes, event.context, event.calendarLabel].filter(Boolean).join(' ');
+  return LATE_SHIFT_PATTERN.test(descriptor) || PM_SHIFT_PATTERN.test(event.title);
+}
+
+function isEarlyShiftEvent(event: ScheduleEvent) {
+  const descriptor = [event.title, event.notes, event.context, event.calendarLabel].filter(Boolean).join(' ');
+  return EARLY_SHIFT_PATTERN.test(descriptor) || AM_SHIFT_PATTERN.test(event.title);
+}
+
+export function getLateToEarlyShiftCounts(events: ScheduleEvent[]) {
   const lateShiftDaysByPerson = new Map<TeamMember, Set<string>>();
   const earlyShiftDaysByPerson = new Map<TeamMember, Set<string>>();
 
   events.forEach((event) => {
     if (!event.person) return;
-    if (LATE_SHIFT_PATTERN.test(event.title)) {
+    if (isLateShiftEvent(event)) {
       const lateDays = lateShiftDaysByPerson.get(event.person) ?? new Set<string>();
       lateDays.add(event.date);
       lateShiftDaysByPerson.set(event.person, lateDays);
     }
 
-    if (EARLY_SHIFT_PATTERN.test(event.title)) {
+    if (isEarlyShiftEvent(event)) {
       const earlyDays = earlyShiftDaysByPerson.get(event.person) ?? new Set<string>();
       earlyDays.add(event.date);
       earlyShiftDaysByPerson.set(event.person, earlyDays);

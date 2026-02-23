@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { convertTeamupEvents } from './App';
+import { convertTeamupEvents, getLateToEarlyShiftCounts } from './App';
 import type { TeamupEvent } from './lib/teamupApi';
 
 describe('convertTeamupEvents owner resolution', () => {
@@ -59,5 +59,60 @@ describe('convertTeamupEvents owner resolution', () => {
         idDerivedPerson: 'Paula Johnson'
       })
     );
+  });
+});
+
+
+describe('getLateToEarlyShiftCounts', () => {
+  it('counts turnarounds when shifts are marked as PM then AM on next day', () => {
+    const counts = getLateToEarlyShiftCounts([
+      {
+        id: 'evt-1',
+        source: 'teamup',
+        date: '2026-02-01',
+        title: 'ED PM Shift',
+        person: 'Paula Johnson',
+        category: 'shift',
+        context: 'General ECC Service'
+      },
+      {
+        id: 'evt-2',
+        source: 'teamup',
+        date: '2026-02-02',
+        title: 'ED AM Shift',
+        person: 'Paula Johnson',
+        category: 'shift',
+        context: 'General ECC Service'
+      }
+    ]);
+
+    expect(counts.find((item) => item.label === 'Paula Johnson')?.value).toBe(1);
+  });
+
+  it('counts turnarounds when shift hints exist in notes/context even without early/late in title', () => {
+    const counts = getLateToEarlyShiftCounts([
+      {
+        id: 'evt-3',
+        source: 'teamup',
+        date: '2026-02-05',
+        title: 'ECC service',
+        notes: 'Evening coverage',
+        person: 'Liz Thomovsky',
+        category: 'shift',
+        context: 'General ECC Service'
+      },
+      {
+        id: 'evt-4',
+        source: 'teamup',
+        date: '2026-02-06',
+        title: 'ECC service',
+        notes: 'Morning coverage',
+        person: 'Liz Thomovsky',
+        category: 'shift',
+        context: 'General ECC Service'
+      }
+    ]);
+
+    expect(counts.find((item) => item.label === 'Liz Thomovsky')?.value).toBe(1);
   });
 });
