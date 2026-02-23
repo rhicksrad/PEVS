@@ -467,8 +467,12 @@ function getDateRange(start: string, end: string) {
 }
 
 function BarChart({ data }: { data: NamedValue[] }) {
+  if (data.length === 0) return <p className="chart-empty">No data for the selected range.</p>;
   const maxValue = Math.max(...data.map((item) => item.value), 1);
-  return <div className="chart-list">{data.map((item) => <div key={item.label} className="chart-row"><span>{item.label}</span><div className="bar-track"><div className="bar-fill" style={{ width: `${(item.value / maxValue) * 100}%`, background: item.color ?? '#60a5fa' }} /></div><strong>{item.value.toFixed(1)}</strong></div>)}</div>;
+  return <div className="chart-list">{data.map((item) => {
+    const ratio = (item.value / maxValue) * 100;
+    return <div key={item.label} className="chart-row"><span className="chart-row-label">{item.label}</span><div className="bar-track"><div className="bar-fill" style={{ width: `${ratio}%`, background: item.color ?? '#60a5fa' }} /></div><strong>{item.value.toFixed(1)}</strong></div>;
+  })}</div>;
 }
 
 function LineChart({ data }: { data: NamedValue[] }) {
@@ -483,7 +487,7 @@ function LineChart({ data }: { data: NamedValue[] }) {
     return `${x},${y}`;
   }).join(' ');
 
-  return <><svg viewBox={`0 0 ${width} ${height}`} className="line-chart" role="img" aria-label="hours over time line chart"><polyline points={points} fill="none" stroke="#38bdf8" strokeWidth="3" strokeLinecap="round" /></svg><div className="chart-inline-labels"><span>{data[0].label}</span><span>{data[data.length - 1].label}</span></div></>;
+  return <><svg viewBox={`0 0 ${width} ${height}`} className="line-chart" role="img" aria-label="hours over time line chart"><defs><linearGradient id="lineGlow" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#38bdf8" /><stop offset="100%" stopColor="#a78bfa" /></linearGradient></defs><polyline points={points} fill="none" stroke="url(#lineGlow)" strokeWidth="3.5" strokeLinecap="round" /><polyline points={`${points} ${width - padding},${height - padding} ${padding},${height - padding}`} fill="url(#lineGlow)" opacity="0.15" /></svg><div className="chart-inline-labels"><span>{data[0].label}</span><span>{data[data.length - 1].label}</span></div></>;
 }
 
 function App() {
@@ -725,7 +729,31 @@ function App() {
           })}</div>}
         </aside>
       </section>
-    </> : <section className="insights-shell"><div className="insight-range"><label>Start<input type="date" value={insightRangeStart} onChange={(event) => setInsightRangeStart(event.target.value)} max={insightRangeEnd} /></label><label>End<input type="date" value={insightRangeEnd} onChange={(event) => setInsightRangeEnd(event.target.value)} min={insightRangeStart} /></label></div><div className="insight-grid"><article className="insight-card"><h3>1) Hours Over Time</h3><LineChart data={insights.hoursByDay} /></article><article className="insight-card"><h3>2) Hours by Doctor</h3><BarChart data={insights.hoursByPerson} /></article><article className="insight-card"><h3>3) Weekday vs Weekend Hours</h3><BarChart data={insights.weekdayWeekend} /></article><article className="insight-card"><h3>4) Most Hours per Month Ranking</h3><BarChart data={insights.monthRanking} /></article><article className="insight-card"><h3>5) Consecutive Workday Max</h3><BarChart data={insights.workDayStreaks} /></article><article className="insight-card"><h3>6) Consecutive Days Off Max</h3><BarChart data={insights.dayOffStreaks} /></article><article className="insight-card"><h3>7) Start Time Distribution</h3><BarChart data={insights.startHourBuckets} /></article><article className="insight-card"><h3>8) Hours by Day of Week</h3><BarChart data={insights.weekdayHours} /></article><article className="insight-card"><h3>9) Overtime Days (&gt;8h)</h3><BarChart data={insights.overtimeCounts} /></article><article className="insight-card"><h3>10) Highest Load Days</h3><BarChart data={insights.topHeavyDays} /></article></div></section>}
+    </> : <section className="insights-shell">
+      <div className="insights-hero">
+        <div>
+          <p className="insights-kicker">Pulse Dashboard</p>
+          <h2>Team performance insights</h2>
+          <p className="insights-subtitle">Track workload balance, streaks, and peak-demand patterns with live Teamup data.</p>
+        </div>
+        <div className="insight-range">
+          <label>Start<input type="date" value={insightRangeStart} onChange={(event) => setInsightRangeStart(event.target.value)} max={insightRangeEnd} /></label>
+          <label>End<input type="date" value={insightRangeEnd} onChange={(event) => setInsightRangeEnd(event.target.value)} min={insightRangeStart} /></label>
+        </div>
+      </div>
+      <div className="insight-grid">
+        <article className="insight-card insight-card-feature"><h3>Hours Over Time</h3><LineChart data={insights.hoursByDay} /></article>
+        <article className="insight-card"><h3>Hours by Doctor</h3><BarChart data={insights.hoursByPerson} /></article>
+        <article className="insight-card"><h3>Weekday vs Weekend Hours</h3><BarChart data={insights.weekdayWeekend} /></article>
+        <article className="insight-card"><h3>Most Hours per Month Ranking</h3><BarChart data={insights.monthRanking} /></article>
+        <article className="insight-card"><h3>Consecutive Workday Max</h3><BarChart data={insights.workDayStreaks} /></article>
+        <article className="insight-card"><h3>Consecutive Days Off Max</h3><BarChart data={insights.dayOffStreaks} /></article>
+        <article className="insight-card"><h3>Start Time Distribution</h3><BarChart data={insights.startHourBuckets} /></article>
+        <article className="insight-card"><h3>Hours by Day of Week</h3><BarChart data={insights.weekdayHours} /></article>
+        <article className="insight-card"><h3>Overtime Days (&gt;8h)</h3><BarChart data={insights.overtimeCounts} /></article>
+        <article className="insight-card"><h3>Highest Load Days</h3><BarChart data={insights.topHeavyDays} /></article>
+      </div>
+    </section>}
     <footer className="app-footer">{isLoadingEvents ? 'Loading Teamup events…' : 'Live Teamup data via worker proxy'}</footer>
   </main>;
 }
