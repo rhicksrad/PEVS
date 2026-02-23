@@ -99,6 +99,7 @@ const KNOWN_CALENDARS: Record<string, Omit<CalendarMeta, 'label'>> = {
 };
 
 
+// Fallback-only mapping when payload does not include calendar names; keep in sync with Teamup if used.
 const SUBCALENDAR_ID_TO_LABEL: Record<number, string> = {
   432033: 'Aimee Brooks',
   432034: 'Paula Johnson',
@@ -392,11 +393,11 @@ function convertTeamupEvents(teamupEvents: TeamupEvent[]): ScheduleEvent[] {
       .map((id) => SUBCALENDAR_ID_TO_LABEL[id])
       .find((label): label is string => Boolean(label));
 
-    const matchedLegend =
-      (matchedById ? toCalendarMeta(matchedById, rawColor) : undefined) ??
-      Array.from(referencedCalendarNames)
-        .map((name) => toCalendarMeta(name, rawColor))
-        .find((metaItem) => KNOWN_CALENDARS[metaItem.label.toLowerCase()]);
+    const matchedByName = Array.from(referencedCalendarNames)
+      .map((name) => toCalendarMeta(name, rawColor))
+      .find((metaItem) => KNOWN_CALENDARS[metaItem.label.toLowerCase()]);
+
+    const matchedLegend = matchedByName ?? (matchedById ? toCalendarMeta(matchedById, rawColor) : undefined);
 
     const ownerCandidates = extractOwnerCandidates(eventRecord);
     const fallbackPerson = inferOwnerFromText(

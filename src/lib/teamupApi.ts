@@ -7,6 +7,15 @@ export interface TeamupEvent {
   remote_id?: string;
   subcalendar_id?: number;
   subcalendar_ids?: number[];
+  subcalendar_name?: string;
+  calendar_name?: string;
+  subcalendar?: {
+    id?: number;
+    name?: string;
+    title?: string;
+    color?: string;
+    [key: string]: unknown;
+  };
   title: string;
   notes?: string;
   location?: string;
