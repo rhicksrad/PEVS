@@ -674,11 +674,10 @@ function App() {
   return <main className="app-shell" ref={printableRef}>
     <section className="top-bar">
       <header className="calendar-header">
-        <div className="header-title-wrap"><h1>{view === 'calendar' ? formatMonthYear(viewMonth) : 'Schedule Insights'}</h1><p className="subheading">{isLoadingEvents ? 'Loading Teamup events…' : 'Live Teamup data via worker proxy'}</p></div>
+        <div className="header-title-wrap"><h1>{view === 'calendar' ? formatMonthYear(viewMonth) : 'Schedule Insights'}</h1>{view === 'calendar' && <div className="month-nav-actions"><button type="button" onClick={() => setViewMonth((current) => new Date(current.getFullYear(), current.getMonth() - 1, 1))}>Prev</button><button type="button" onClick={() => setViewMonth((current) => new Date(current.getFullYear(), current.getMonth() + 1, 1))}>Next</button></div>}</div>
         <div className="calendar-actions">
           <button type="button" className={view === 'calendar' ? 'tab-active' : ''} onClick={() => setView('calendar')}>Calendar</button>
           <button type="button" className={view === 'insights' ? 'tab-active' : ''} onClick={() => setView('insights')}>Insights</button>
-          {view === 'calendar' && <><button type="button" onClick={() => setViewMonth((current) => new Date(current.getFullYear(), current.getMonth() - 1, 1))}>Prev</button><button type="button" onClick={() => setViewMonth(DEFAULT_MONTH)}>Feb 2026</button><button type="button" onClick={() => setViewMonth((current) => new Date(current.getFullYear(), current.getMonth() + 1, 1))}>Next</button></>}
           <button type="button" onClick={downloadDisplayedScreen} disabled={isExportingPdf}>{isExportingPdf ? 'Building PDF…' : 'Download PDF'}</button>
         </div>
       </header>
@@ -730,6 +729,7 @@ function App() {
         </aside>
       </section>
     </> : <section className="insights-shell"><div className="insight-range"><label>Start<input type="date" value={insightRangeStart} onChange={(event) => setInsightRangeStart(event.target.value)} max={insightRangeEnd} /></label><label>End<input type="date" value={insightRangeEnd} onChange={(event) => setInsightRangeEnd(event.target.value)} min={insightRangeStart} /></label></div><div className="insight-grid"><article className="insight-card"><h3>1) Hours Over Time</h3><LineChart data={insights.hoursByDay} /></article><article className="insight-card"><h3>2) Hours by Doctor</h3><BarChart data={insights.hoursByPerson} /></article><article className="insight-card"><h3>3) Weekday vs Weekend Hours</h3><BarChart data={insights.weekdayWeekend} /></article><article className="insight-card"><h3>4) Most Hours per Month Ranking</h3><BarChart data={insights.monthRanking} /></article><article className="insight-card"><h3>5) Consecutive Workday Max</h3><BarChart data={insights.workDayStreaks} /></article><article className="insight-card"><h3>6) Consecutive Days Off Max</h3><BarChart data={insights.dayOffStreaks} /></article><article className="insight-card"><h3>7) Start Time Distribution</h3><BarChart data={insights.startHourBuckets} /></article><article className="insight-card"><h3>8) Hours by Day of Week</h3><BarChart data={insights.weekdayHours} /></article><article className="insight-card"><h3>9) Overtime Days (&gt;8h)</h3><BarChart data={insights.overtimeCounts} /></article><article className="insight-card"><h3>10) Highest Load Days</h3><BarChart data={insights.topHeavyDays} /></article></div></section>}
+    <footer className="app-footer">{isLoadingEvents ? 'Loading Teamup events…' : 'Live Teamup data via worker proxy'}</footer>
   </main>;
 }
 
