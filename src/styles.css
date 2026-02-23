@@ -57,6 +57,13 @@ body { margin: 0; background: radial-gradient(circle at top, #1f2a44 0%, #0e1525
   gap: 0.75rem;
   min-height: 0;
 }
+.calendar-main {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: 0.4rem;
+  min-height: 0;
+}
+
 .weekday-cell {
   text-align: center;
   font-weight: 600;
