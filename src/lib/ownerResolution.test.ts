@@ -3,15 +3,40 @@ import { describe, expect, it, vi } from 'vitest';
 import { resolveInferredOwner } from './ownerResolution';
 
 describe('resolveInferredOwner', () => {
-  it('prefers text/alias fallback over subcalendar person when structured owner is absent', () => {
+  it('prefers subcalendar person over text/alias fallback when structured owner is absent', () => {
     const result = resolveInferredOwner({
       matchedLegendPerson: 'Paula Johnson',
-      fallbackPerson: 'Liz Thomovsky'
+      fallbackPerson: 'Liz Thomovsky',
+      warn: vi.fn()
     });
 
-    expect(result).toBe('Liz Thomovsky');
+    expect(result).toBe('Paula Johnson');
   });
 
+
+  it('warns when subcalendar and text fallback conflict without structured owner', () => {
+    const warn = vi.fn();
+
+    const result = resolveInferredOwner({
+      matchedLegendPerson: 'Paula Johnson',
+      fallbackPerson: 'Liz Thomovsky',
+      eventId: 'evt-456',
+      eventTitle: 'Follow-up shift',
+      warn
+    });
+
+    expect(result).toBe('Paula Johnson');
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn).toHaveBeenCalledWith(
+      'Teamup event owner conflict: using subcalendar owner over text inference',
+      expect.objectContaining({
+        id: 'evt-456',
+        title: 'Follow-up shift',
+        matchedLegendPerson: 'Paula Johnson',
+        fallbackPerson: 'Liz Thomovsky'
+      })
+    );
+  });
   it('prefers structured owner over text fallback and emits warning on conflict', () => {
     const warn = vi.fn();
 

@@ -24,5 +24,14 @@ export function resolveInferredOwner<TPerson extends string>({
     });
   }
 
-  return structuredOwner ?? fallbackPerson ?? matchedLegendPerson;
+  if (!structuredOwner && matchedLegendPerson && fallbackPerson && matchedLegendPerson !== fallbackPerson) {
+    warn('Teamup event owner conflict: using subcalendar owner over text inference', {
+      id: eventId,
+      title: eventTitle,
+      matchedLegendPerson,
+      fallbackPerson
+    });
+  }
+
+  return structuredOwner ?? matchedLegendPerson ?? fallbackPerson;
 }
