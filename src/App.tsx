@@ -512,6 +512,10 @@ function App() {
   const [view, setView] = useState<AppView>('calendar');
 
   const monthGridDays = useMemo(() => getCalendarGridDays(viewMonth), [viewMonth]);
+
+  useEffect(() => {
+    setSelectedDate(new Date(viewMonth.getFullYear(), viewMonth.getMonth(), 1));
+  }, [viewMonth]);
   const insightDefaultStart = formatIsoDate(monthGridDays[0]);
   const insightDefaultEnd = formatIsoDate(monthGridDays[monthGridDays.length - 1]);
   const [insightRangeStart, setInsightRangeStart] = useState(insightDefaultStart);
@@ -679,7 +683,7 @@ function App() {
         <div className="calendar-actions">
           <button type="button" className={view === 'calendar' ? 'tab-active' : ''} onClick={() => setView('calendar')}>Calendar</button>
           <button type="button" className={view === 'insights' ? 'tab-active' : ''} onClick={() => setView('insights')}>Insights</button>
-          {view === 'calendar' && <><button type="button" onClick={() => setViewMonth(new Date(viewMonth.getFullYear(), viewMonth.getMonth() - 1, 1))}>Prev</button><button type="button" onClick={() => setViewMonth(DEFAULT_MONTH)}>Feb 2026</button><button type="button" onClick={() => setViewMonth(new Date(viewMonth.getFullYear(), viewMonth.getMonth() + 1, 1))}>Next</button></>}
+          {view === 'calendar' && <><button type="button" onClick={() => setViewMonth((current) => new Date(current.getFullYear(), current.getMonth() - 1, 1))}>Prev</button><button type="button" onClick={() => setViewMonth(DEFAULT_MONTH)}>Feb 2026</button><button type="button" onClick={() => setViewMonth((current) => new Date(current.getFullYear(), current.getMonth() + 1, 1))}>Next</button></>}
           <button type="button" onClick={downloadDisplayedScreen} disabled={isExportingPdf}>{isExportingPdf ? 'Building PDF…' : 'Download PDF'}</button>
         </div>
       </header>
@@ -714,12 +718,19 @@ function App() {
         <aside className="day-sidebar">
           <h2>{formatIsoDate(selectedDate)}</h2>
           {selectedDateApiEvents.length === 0 ? <p className="chart-empty">No events from API for this day.</p> : <div className="day-events">{selectedDateApiEvents.map((item) => {
-            const apiEventTime = item.all_day ? 'All day' : formatDisplayTime(toLocalTime(item.start_dt));
+            const apiStartTime = toLocalTime(item.start_dt);
+            const apiEndTime = toLocalTime(item.end_dt);
+            const apiEventTime = item.all_day ? 'All day' : `${formatDisplayTime(apiStartTime)} - ${formatDisplayTime(apiEndTime)}`;
+            const durationHours = item.all_day ? undefined : hoursBetween(apiStartTime, apiEndTime);
             const trimmedSubcalendarName = typeof item.subcalendar_name === 'string' ? item.subcalendar_name.trim() : '';
             const mappedSubcalendarLabel = item.subcalendar_id ? SUBCALENDAR_ID_TO_LABEL[item.subcalendar_id] : undefined;
             const resolvedSubcalendarLabel = trimmedSubcalendarName || mappedSubcalendarLabel || (item.subcalendar_id ? `subcalendar ${item.subcalendar_id}` : '');
             const subcalendarText = resolvedSubcalendarLabel ? ` • ${resolvedSubcalendarLabel}` : '';
-            return <div key={`${item.id}-${item.start_dt}-sidebar`} className="event-chip" style={{ borderLeftColor: '#38bdf8', background: withAlpha('#38bdf8', 0.22), color: '#e2e8f0' }}><strong>{apiEventTime}</strong> {item.title}<br /><small>ID {item.id}{subcalendarText}</small></div>;
+            const locationText = typeof item.location === 'string' && item.location.trim() ? item.location.trim() : undefined;
+            const recurrenceText = typeof item.rrule === 'string' && item.rrule.trim() ? item.rrule.trim() : undefined;
+            const timezoneText = typeof item.tz === 'string' && item.tz.trim() ? item.tz.trim() : undefined;
+            const notesText = typeof item.notes === 'string' && item.notes.trim() ? item.notes.trim() : undefined;
+            return <div key={`${item.id}-${item.start_dt}-sidebar`} className="event-chip" style={{ borderLeftColor: '#38bdf8', background: withAlpha('#38bdf8', 0.22), color: '#e2e8f0' }}><strong>{apiEventTime}</strong> {item.title}<br /><small>ID {item.id}{subcalendarText}</small>{durationHours !== undefined && <><br /><small>Duration {durationHours.toFixed(2)}h</small></>}{locationText && <><br /><small>Location {locationText}</small></>}{timezoneText && <><br /><small>TZ {timezoneText}</small></>}{recurrenceText && <><br /><small>Rule {recurrenceText}</small></>}{notesText && <><br /><small>Notes {notesText}</small></>}</div>;
           })}</div>}
         </aside>
       </section>

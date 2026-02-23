@@ -10,11 +10,17 @@ export function endOfMonth(monthDate: Date): Date {
 
 export function getCalendarGridDays(monthDate: Date): Date[] {
   const firstDay = startOfMonth(monthDate);
+  const lastDay = endOfMonth(monthDate);
   const startOffset = firstDay.getDay();
+  const endOffset = 6 - lastDay.getDay();
   const gridStart = new Date(firstDay);
+  const gridEnd = new Date(lastDay);
   gridStart.setDate(firstDay.getDate() - startOffset);
+  gridEnd.setDate(lastDay.getDate() + endOffset);
 
-  return Array.from({ length: 42 }, (_, index) => {
+  const totalDays = Math.floor((gridEnd.getTime() - gridStart.getTime()) / (24 * 60 * 60 * 1000)) + 1;
+
+  return Array.from({ length: totalDays }, (_, index) => {
     const day = new Date(gridStart);
     day.setDate(gridStart.getDate() + index);
     return day;
