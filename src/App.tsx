@@ -623,7 +623,9 @@ function App() {
   const insightDays = useMemo(() => getDateRange(insightRangeStart, insightRangeEnd), [insightRangeStart, insightRangeEnd]);
 
   const insights = useMemo(() => {
+    const weeksInRange = Math.max(1, insightDays.length / 7);
     const hoursByPerson = TEAM.map((person) => ({ label: person, value: insightEvents.filter((event) => event.person === person).reduce((sum, event) => sum + getEventHours(event), 0), color: PERSON_COLORS[person] }));
+    const averageHoursPerWeekByPerson = hoursByPerson.map((personHours) => ({ ...personHours, value: Number((personHours.value / weeksInRange).toFixed(2)) }));
     const hoursByDay = insightDays.map((day) => ({ label: day.slice(5), value: insightEvents.filter((event) => event.date === day).reduce((sum, event) => sum + getEventHours(event), 0) }));
     const weekdayHours = WEEKDAY_LABELS.map((dayName, index) => ({ label: dayName, value: insightEvents.filter((event) => new Date(`${event.date}T00:00:00`).getDay() === (index + 1) % 7).reduce((sum, event) => sum + getEventHours(event), 0) }));
     const monthMap = new Map<string, number>();
@@ -653,7 +655,7 @@ function App() {
       { label: 'Weekday', value: insightEvents.filter((event) => { const day = new Date(`${event.date}T00:00:00`).getDay(); return day > 0 && day < 6; }).reduce((sum, event) => sum + getEventHours(event), 0), color: '#60a5fa' },
       { label: 'Weekend', value: insightEvents.filter((event) => { const day = new Date(`${event.date}T00:00:00`).getDay(); return day === 0 || day === 6; }).reduce((sum, event) => sum + getEventHours(event), 0), color: '#f97316' }
     ];
-    return { hoursByPerson, hoursByDay, weekdayHours, monthRanking, topHeavyDays, workDayStreaks, dayOffStreaks, startHourBuckets, overtimeCounts, weekdayWeekend };
+    return { hoursByPerson, averageHoursPerWeekByPerson, hoursByDay, weekdayHours, monthRanking, topHeavyDays, workDayStreaks, dayOffStreaks, startHourBuckets, overtimeCounts, weekdayWeekend };
   }, [insightEvents, insightDays]);
 
   const togglePerson = (person: TeamMember) => setSelectedPeople((current) => (current.includes(person) ? current.filter((item) => item !== person) : [...current, person]));
@@ -743,7 +745,7 @@ function App() {
       </div>
       <div className="insight-grid">
         <article className="insight-card insight-card-feature"><h3>Hours Over Time</h3><LineChart data={insights.hoursByDay} /></article>
-        <article className="insight-card"><h3>Hours by Doctor</h3><BarChart data={insights.hoursByPerson} /></article>
+        <article className="insight-card"><h3>Average Hours per Week by Doctor</h3><BarChart data={insights.averageHoursPerWeekByPerson} /></article>
         <article className="insight-card"><h3>Weekday vs Weekend Hours</h3><BarChart data={insights.weekdayWeekend} /></article>
         <article className="insight-card"><h3>Most Hours per Month Ranking</h3><BarChart data={insights.monthRanking} /></article>
         <article className="insight-card"><h3>Consecutive Workday Max</h3><BarChart data={insights.workDayStreaks} /></article>
