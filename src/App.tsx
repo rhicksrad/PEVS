@@ -513,20 +513,17 @@ function App() {
   const [insightRangeEnd, setInsightRangeEnd] = useState(insightDefaultEnd);
 
   useEffect(() => {
-    setInsightRangeStart(insightDefaultStart);
-    setInsightRangeEnd(insightDefaultEnd);
-  }, [insightDefaultStart, insightDefaultEnd]);
-
-  useEffect(() => {
     let isCancelled = false;
     const monthStart = formatIsoDate(new Date(viewMonth.getFullYear(), viewMonth.getMonth(), 1));
     const monthEnd = formatIsoDate(new Date(viewMonth.getFullYear(), viewMonth.getMonth() + 1, 0));
+    const rangeStart = view === 'insights' ? insightRangeStart : monthStart;
+    const rangeEnd = view === 'insights' ? insightRangeEnd : monthEnd;
 
-    const loadMonthEvents = async () => {
+    const loadEvents = async () => {
       setIsLoadingEvents(true);
       try {
         const [fetchedEvents, fetchedSubcalendarLabels] = await Promise.all([
-          fetchEvents(monthStart, monthEnd),
+          fetchEvents(rangeStart, rangeEnd),
           fetchSubcalendarLabels()
         ]);
         const normalized = convertTeamupEvents(fetchedEvents, fetchedSubcalendarLabels);
@@ -552,12 +549,12 @@ function App() {
       }
     };
 
-    loadMonthEvents();
+    loadEvents();
 
     return () => {
       isCancelled = true;
     };
-  }, [viewMonth]);
+  }, [view, viewMonth, insightRangeStart, insightRangeEnd]);
 
   const calendarLegend = useMemo(() => LEGEND_CALENDARS.filter((item) => item.kind === 'other'), []);
   const filterableCalendarLabels = useMemo(() => new Set(calendarLegend.map((item) => item.label)), [calendarLegend]);
