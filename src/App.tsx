@@ -105,10 +105,10 @@ const SUBCALENDAR_ID_TO_LABEL: Record<number, string> = {
 };
 
 const PERSON_ALIASES: Record<TeamMember, string[]> = {
-  'Aimee Brooks': ['aimee brooks', 'aimee', 'brooks', 'abrooks', 'brooks, aimee', 'a brooks'],
-  'Ana Aghili': ['ana aghili', 'ana', 'aghili', 'aaghili', 'aghili, ana', 'a aghili'],
-  'Liz Thomovsky': ['liz thomovsky', 'liz', 'thomovsky', 'lthomovsky', 'thomovsky, liz', 'l thomovsky'],
-  'Paula Johnson': ['paula johnson', 'paula', 'johnson', 'pjohnson', 'johnson, paula', 'p johnson']
+  'Aimee Brooks': ['aimee brooks', 'aimee', 'brooks', 'abrooks', 'brooks, aimee', 'a brooks', 'ab'],
+  'Ana Aghili': ['ana aghili', 'ana', 'aghili', 'aaghili', 'aghili, ana', 'a aghili', 'aa'],
+  'Liz Thomovsky': ['liz thomovsky', 'liz', 'thomovsky', 'lthomovsky', 'thomovsky, liz', 'l thomovsky', 'lt'],
+  'Paula Johnson': ['paula johnson', 'paula', 'johnson', 'pjohnson', 'johnson, paula', 'p johnson', 'pj']
 };
 
 const PERSON_ALIAS_MAP = Object.entries(PERSON_ALIASES).reduce<Record<string, TeamMember>>((map, [member, aliases]) => {
@@ -521,7 +521,8 @@ function App() {
     };
   }, [viewMonth]);
 
-  const calendarLegend = useMemo(() => LEGEND_CALENDARS, []);
+  const calendarLegend = useMemo(() => LEGEND_CALENDARS.filter((item) => item.kind === 'other'), []);
+  const filterableCalendarLabels = useMemo(() => new Set(calendarLegend.map((item) => item.label)), [calendarLegend]);
 
   const availableContexts = useMemo(() => {
     const knownContexts = new Set<string>(EVENT_CONTEXTS);
@@ -561,10 +562,10 @@ function App() {
 
   const filteredEvents = useMemo(() => events.filter((event) => {
     const calendarLabel = event.calendarLabel ?? event.context;
-    if (calendarLabel && selectedCalendars.length > 0 && !selectedCalendars.includes(calendarLabel)) return false;
+    if (calendarLabel && filterableCalendarLabels.has(calendarLabel) && selectedCalendars.length > 0 && !selectedCalendars.includes(calendarLabel)) return false;
     if (event.person && !selectedPeople.includes(event.person)) return false;
     return selectedContexts.includes(event.context);
-  }), [events, selectedCalendars, selectedPeople, selectedContexts]);
+  }), [events, filterableCalendarLabels, selectedCalendars, selectedPeople, selectedContexts]);
 
   const dayMap = useMemo(() => filteredEvents.reduce<Record<string, ScheduleEvent[]>>((acc, event) => {
     acc[event.date] = [...(acc[event.date] ?? []), event].sort((a, b) => (a.startTime ?? '99:99').localeCompare(b.startTime ?? '99:99'));
@@ -641,15 +642,16 @@ function App() {
     <section className="toolbar">
       {validationIssues.length > 0 && <div className="warning-banner" role="status"><strong>Schedule warnings:</strong> {validationIssues.length} issue(s) detected. Resolve owner mapping for Teamup events when applicable.{validationIssues.length > 0 && <ul>{validationIssues.slice(0, 3).map((issue) => <li key={issue}>{issue}</li>)}{validationIssues.length > 3 && <li>+{validationIssues.length - 3} more issue(s) in console.</li>}</ul>}</div>}
       {loadError && <div className="warning-banner" role="status"><strong>Unable to load events:</strong> {loadError}</div>}
-      <div className="bubble-row">{calendarLegend.map((calendar) => { const active = selectedCalendars.includes(calendar.label); return <button key={calendar.label} type="button" className={['person-bubble', active ? 'is-active' : ''].join(' ').trim()} style={{ borderColor: calendar.color, color: calendar.color, background: active ? `${calendar.color}33` : 'rgba(15, 23, 42, 0.85)' }} onClick={() => toggleCalendar(calendar.label)}>{calendar.label}</button>; })}</div>
+      {calendarLegend.length > 0 && <div className="bubble-row">{calendarLegend.map((calendar) => { const active = selectedCalendars.includes(calendar.label); return <button key={calendar.label} type="button" className={['person-bubble', active ? 'is-active' : ''].join(' ').trim()} style={{ borderColor: calendar.color, color: calendar.color, background: active ? `${calendar.color}33` : 'rgba(15, 23, 42, 0.85)' }} onClick={() => toggleCalendar(calendar.label)}>{calendar.label}</button>; })}</div>}
       <div className="bubble-row">{TEAM.map((person) => { const active = selectedPeople.includes(person); return <button key={person} type="button" className={['person-bubble', active ? 'is-active' : ''].join(' ').trim()} style={{ borderColor: PERSON_COLORS[person], color: PERSON_COLORS[person], background: active ? `${PERSON_COLORS[person]}33` : 'rgba(15, 23, 42, 0.85)' }} onClick={() => togglePerson(person)}>{person}</button>; })}</div>
       <div className="bubble-row">{availableContexts.map((context) => { const active = selectedContexts.includes(context); return <button key={context} type="button" className={['person-bubble', active ? 'is-active' : ''].join(' ').trim()} onClick={() => toggleContext(context)}>{context}</button>; })}</div>
     </section>
 
     {view === 'calendar' ? <>
-      <div className="weekday-row" role="presentation">{WEEKDAY_LABELS.map((weekday) => <div key={weekday} className="weekday-cell">{weekday}</div>)}</div>
       <section className="calendar-layout">
-        <section className="calendar-grid">{days.map((day) => {
+        <section className="calendar-main">
+          <div className="weekday-row" role="presentation">{WEEKDAY_LABELS.map((weekday) => <div key={weekday} className="weekday-cell">{weekday}</div>)}</div>
+          <section className="calendar-grid">{days.map((day) => {
           const iso = formatIsoDate(day);
           const isSelected = isSameDay(day, selectedDate);
           const inMonth = isSameMonth(day, viewMonth);
@@ -659,6 +661,7 @@ function App() {
             {dayEvents.length > 0 && <div className="day-event-stack">{dayEvents.slice(0, 5).map((item) => <span key={`${item.id}-${item.date}-${item.startTime ?? 'all-day'}`} className="day-event-pill" style={{ background: getEventColor(item) }}>{item.allDay ? item.title : `${formatDisplayTime(item.startTime).replace(' AM', 'a').replace(' PM', 'p')} ${item.title}`}</span>)}{dayEvents.length > 5 && <span className="day-event-more">+{dayEvents.length - 5} more</span>}</div>}
           </button>;
         })}</section>
+        </section>
         <aside className="day-sidebar">
           <h2>{formatIsoDate(selectedDate)}</h2>
           {selectedDateEvents.length === 0 ? <p className="chart-empty">No events for this day.</p> : <div className="day-events">{selectedDateEvents.map((item) => <div key={`${item.id}-${item.date}-${item.startTime ?? 'all-day'}-sidebar`} className="event-chip" style={{ borderLeftColor: getEventColor(item), background: withAlpha(getEventColor(item), 0.22), color: '#e2e8f0' }}><strong>{item.allDay ? 'All day' : formatDisplayTime(item.startTime)}</strong> {item.title}</div>)}</div>}
