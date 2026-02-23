@@ -478,12 +478,30 @@ function getNextIsoDate(date: string) {
 
 function isLateShiftEvent(event: ScheduleEvent) {
   const descriptor = [event.title, event.notes, event.context, event.calendarLabel].filter(Boolean).join(' ');
-  return LATE_SHIFT_PATTERN.test(descriptor) || PM_SHIFT_PATTERN.test(event.title);
+  if (LATE_SHIFT_PATTERN.test(descriptor) || PM_SHIFT_PATTERN.test(event.title)) {
+    return true;
+  }
+
+  if (!event.startTime) {
+    return false;
+  }
+
+  const [hours] = event.startTime.split(':').map(Number);
+  return Number.isFinite(hours) && hours >= 15;
 }
 
 function isEarlyShiftEvent(event: ScheduleEvent) {
   const descriptor = [event.title, event.notes, event.context, event.calendarLabel].filter(Boolean).join(' ');
-  return EARLY_SHIFT_PATTERN.test(descriptor) || AM_SHIFT_PATTERN.test(event.title);
+  if (EARLY_SHIFT_PATTERN.test(descriptor) || AM_SHIFT_PATTERN.test(event.title)) {
+    return true;
+  }
+
+  if (!event.startTime) {
+    return false;
+  }
+
+  const [hours] = event.startTime.split(':').map(Number);
+  return Number.isFinite(hours) && hours <= 9;
 }
 
 export function getLateToEarlyShiftCounts(events: ScheduleEvent[]) {
