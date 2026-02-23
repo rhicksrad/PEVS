@@ -18,7 +18,12 @@ export type ScheduleValidationResult = {
 
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_PATTERN = /^([01]\d|2[0-3]):([0-5]\d)$/;
-const TEAMUP_NON_PERSON_ALLOWLIST_CONTEXTS = new Set(['General Events', 'ECC Resident Chief']);
+const TEAMUP_NON_PERSON_ALLOWLIST_CONTEXTS = new Set([
+  'General Events',
+  'ECC Resident Chief',
+  'ECC Teaching',
+  'General ECC Service'
+]);
 
 const toMinutes = (time: string) => {
   const [hour, minute] = time.split(':').map(Number);
