@@ -113,6 +113,8 @@ const PERSON_ALIAS_MAP = Object.entries(PERSON_ALIASES).reduce<Record<string, Te
   });
   return map;
 }, {});
+const LATE_SHIFT_PATTERN = /\blate\b/i;
+const EARLY_SHIFT_PATTERN = /\bearly\b/i;
 
 const withAlpha = (hex: string, alpha: number) => {
   const value = hex.replace('#', '');
@@ -466,6 +468,40 @@ function getDateRange(start: string, end: string) {
   return dates;
 }
 
+function getNextIsoDate(date: string) {
+  const nextDate = new Date(`${date}T00:00:00`);
+  nextDate.setDate(nextDate.getDate() + 1);
+  return formatIsoDate(nextDate);
+}
+
+function getLateToEarlyShiftCounts(events: ScheduleEvent[]) {
+  const lateShiftDaysByPerson = new Map<TeamMember, Set<string>>();
+  const earlyShiftDaysByPerson = new Map<TeamMember, Set<string>>();
+
+  events.forEach((event) => {
+    if (!event.person) return;
+    if (LATE_SHIFT_PATTERN.test(event.title)) {
+      const lateDays = lateShiftDaysByPerson.get(event.person) ?? new Set<string>();
+      lateDays.add(event.date);
+      lateShiftDaysByPerson.set(event.person, lateDays);
+    }
+
+    if (EARLY_SHIFT_PATTERN.test(event.title)) {
+      const earlyDays = earlyShiftDaysByPerson.get(event.person) ?? new Set<string>();
+      earlyDays.add(event.date);
+      earlyShiftDaysByPerson.set(event.person, earlyDays);
+    }
+  });
+
+  return TEAM.map((person) => {
+    const lateDays = lateShiftDaysByPerson.get(person) ?? new Set<string>();
+    const earlyDays = earlyShiftDaysByPerson.get(person) ?? new Set<string>();
+    const value = Array.from(lateDays).filter((day) => earlyDays.has(getNextIsoDate(day))).length;
+
+    return { label: person, value, color: PERSON_COLORS[person] };
+  });
+}
+
 function BarChart({ data }: { data: NamedValue[] }) {
   if (data.length === 0) return <p className="chart-empty">No data for the selected range.</p>;
   const maxValue = Math.max(...data.map((item) => item.value), 1);
@@ -631,9 +667,7 @@ function App() {
     const monthMap = new Map<string, number>();
     insightEvents.forEach((event) => monthMap.set(event.date.slice(0, 7), (monthMap.get(event.date.slice(0, 7)) ?? 0) + getEventHours(event)));
     const monthRanking = Array.from(monthMap.entries()).map(([label, value]) => ({ label, value })).sort((a, b) => b.value - a.value).slice(0, 8);
-    const dayTotals = new Map<string, number>();
-    insightEvents.forEach((event) => dayTotals.set(event.date, (dayTotals.get(event.date) ?? 0) + getEventHours(event)));
-    const topHeavyDays = Array.from(dayTotals.entries()).map(([label, value]) => ({ label: label.slice(5), value })).sort((a, b) => b.value - a.value).slice(0, 8);
+    const lateToEarlyShiftCounts = getLateToEarlyShiftCounts(insightEvents);
     const workDayStreaks = TEAM.map((person) => {
       let maxStreak = 0; let current = 0;
       insightDays.forEach((day) => { const hasWork = insightEvents.some((event) => event.person === person && event.date === day); current = hasWork ? current + 1 : 0; maxStreak = Math.max(maxStreak, current); });
@@ -655,7 +689,7 @@ function App() {
       { label: 'Weekday', value: insightEvents.filter((event) => { const day = new Date(`${event.date}T00:00:00`).getDay(); return day > 0 && day < 6; }).reduce((sum, event) => sum + getEventHours(event), 0), color: '#60a5fa' },
       { label: 'Weekend', value: insightEvents.filter((event) => { const day = new Date(`${event.date}T00:00:00`).getDay(); return day === 0 || day === 6; }).reduce((sum, event) => sum + getEventHours(event), 0), color: '#f97316' }
     ];
-    return { hoursByPerson, averageHoursPerWeekByPerson, hoursByDay, weekdayHours, monthRanking, topHeavyDays, workDayStreaks, dayOffStreaks, startHourBuckets, overtimeCounts, weekdayWeekend };
+    return { hoursByPerson, averageHoursPerWeekByPerson, hoursByDay, weekdayHours, monthRanking, lateToEarlyShiftCounts, workDayStreaks, dayOffStreaks, startHourBuckets, overtimeCounts, weekdayWeekend };
   }, [insightEvents, insightDays]);
 
   const togglePerson = (person: TeamMember) => setSelectedPeople((current) => (current.includes(person) ? current.filter((item) => item !== person) : [...current, person]));
@@ -753,7 +787,7 @@ function App() {
         <article className="insight-card"><h3>Start Time Distribution</h3><BarChart data={insights.startHourBuckets} /></article>
         <article className="insight-card"><h3>Hours by Day of Week</h3><BarChart data={insights.weekdayHours} /></article>
         <article className="insight-card"><h3>Overtime Days (&gt;8h)</h3><BarChart data={insights.overtimeCounts} /></article>
-        <article className="insight-card"><h3>Highest Load Days</h3><BarChart data={insights.topHeavyDays} /></article>
+        <article className="insight-card"><h3>Late → Early Turnarounds</h3><BarChart data={insights.lateToEarlyShiftCounts} /></article>
       </div>
     </section>}
     <footer className="app-footer">{isLoadingEvents ? 'Loading Teamup events…' : 'Live Teamup data via worker proxy'}</footer>
