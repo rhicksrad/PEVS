@@ -71,6 +71,17 @@ const CATEGORY_COLORS: Record<ScheduleCategory, string> = {
 };
 
 const DEFAULT_CALENDAR_COLOR = '#475569';
+const LEGEND_CALENDARS: CalendarMeta[] = [
+  { label: 'Aimee Brooks', color: '#5b2c91', kind: 'person', person: 'Aimee Brooks' },
+  { label: 'Ana Aghili', color: '#f47a20', kind: 'person', person: 'Ana Aghili' },
+  { label: 'ECC Resident Chief', color: '#a63a8d', kind: 'other' },
+  { label: 'ECC Teaching', color: '#eab308', kind: 'context', context: 'ECC Teaching' },
+  { label: 'General ECC Service', color: '#2e8b2f', kind: 'context', context: 'General ECC Service' },
+  { label: 'General Events', color: '#49b3a2', kind: 'context', context: 'General Events' },
+  { label: 'Liz Thomovsky', color: '#b91c1c', kind: 'person', person: 'Liz Thomovsky' },
+  { label: 'Paula Johnson', color: '#2d56b3', kind: 'person', person: 'Paula Johnson' }
+];
+
 const KNOWN_CALENDARS: Record<string, Omit<CalendarMeta, 'label'>> = {
   'aimee brooks': { color: '#5b2c91', kind: 'person', person: 'Aimee Brooks' },
   'ana aghili': { color: '#f47a20', kind: 'person', person: 'Ana Aghili' },
@@ -80,6 +91,17 @@ const KNOWN_CALENDARS: Record<string, Omit<CalendarMeta, 'label'>> = {
   'ecc teaching': { color: '#eab308', kind: 'context', context: 'ECC Teaching' },
   'general events': { color: '#49b3a2', kind: 'context', context: 'General Events' },
   'ecc resident chief': { color: '#a63a8d', kind: 'other' }
+};
+
+
+const SUBCALENDAR_ID_TO_LABEL: Record<number, string> = {
+  432033: 'Aimee Brooks',
+  432034: 'Ana Aghili',
+  432049: 'Liz Thomovsky',
+  2346358: 'Paula Johnson',
+  2346351: 'ECC Teaching',
+  432050: 'General ECC Service',
+  6541026: 'General Events'
 };
 
 const PERSON_ALIASES: Record<TeamMember, string[]> = {
@@ -245,8 +267,8 @@ const formatDisplayTime = (time?: string) => {
 };
 
 function getEventColor(event: ScheduleEvent) {
-  if (event.person) return PERSON_COLORS[event.person];
   if (event.calendarColor) return event.calendarColor;
+  if (event.person) return PERSON_COLORS[event.person];
   return CATEGORY_COLORS[event.category];
 }
 
@@ -271,20 +293,15 @@ function getEventHours(event: ScheduleEvent) {
 }
 
 function toLocalDateKey(value: string) {
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return null;
-
-  const year = parsed.getFullYear();
-  const month = String(parsed.getMonth() + 1).padStart(2, '0');
-  const day = String(parsed.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+  if (typeof value !== 'string' || value.length < 10) return null;
+  const datePart = value.slice(0, 10);
+  return /^\d{4}-\d{2}-\d{2}$/.test(datePart) ? datePart : null;
 }
 
 function toLocalTime(value?: string) {
-  if (!value) return undefined;
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return undefined;
-  return `${String(parsed.getHours()).padStart(2, '0')}:${String(parsed.getMinutes()).padStart(2, '0')}`;
+  if (!value || value.length < 16) return undefined;
+  const timePart = value.slice(11, 16);
+  return /^([01]\d|2[0-3]):([0-5]\d)$/.test(timePart) ? timePart : undefined;
 }
 
 function convertTeamupEvents(teamupEvents: TeamupEvent[]): ScheduleEvent[] {
@@ -306,24 +323,81 @@ function convertTeamupEvents(teamupEvents: TeamupEvent[]): ScheduleEvent[] {
       normalizeHexColor(eventRecord.subcalendar_color) ??
       normalizeHexColor(eventRecord.calendar_color) ??
       normalizeHexColor(subcalendar?.color);
-    const meta = toCalendarMeta(normalizedRawLabel || 'General Events', rawColor);
+    const referencedCalendarNames = new Set<string>();
+    const referencedCalendarIds = new Set<number>();
+    const appendCalendarName = (value: unknown) => {
+      if (typeof value !== 'string' || !value.trim()) return;
+      referencedCalendarNames.add(value.trim());
+    };
+    const appendCalendarId = (value: unknown) => {
+      if (typeof value !== 'number' || !Number.isFinite(value)) return;
+      referencedCalendarIds.add(value);
+    };
+
+    appendCalendarName(rawLabel);
+    appendCalendarId(eventRecord.subcalendar_id);
+
+    if (Array.isArray(eventRecord.subcalendar_ids)) {
+      eventRecord.subcalendar_ids.forEach((id) => appendCalendarId(id));
+    }
+
+    if (Array.isArray(eventRecord.subcalendars)) {
+      eventRecord.subcalendars.forEach((item) => {
+        if (typeof item === 'string') appendCalendarName(item);
+        if (item && typeof item === 'object') {
+          appendCalendarName((item as Record<string, unknown>).name);
+          appendCalendarName((item as Record<string, unknown>).title);
+          appendCalendarId((item as Record<string, unknown>).id);
+        }
+      });
+    }
+
+    if (eventRecord.subcalendars && typeof eventRecord.subcalendars === 'object' && !Array.isArray(eventRecord.subcalendars)) {
+      Object.values(eventRecord.subcalendars as Record<string, unknown>).forEach((item) => {
+        if (typeof item === 'string') appendCalendarName(item);
+        if (item && typeof item === 'object') {
+          appendCalendarName((item as Record<string, unknown>).name);
+          appendCalendarName((item as Record<string, unknown>).title);
+          appendCalendarId((item as Record<string, unknown>).id);
+        }
+      });
+    }
+
+    const matchedById = Array.from(referencedCalendarIds)
+      .map((id) => SUBCALENDAR_ID_TO_LABEL[id])
+      .find((label): label is string => Boolean(label));
+
+    const matchedLegend =
+      (matchedById ? toCalendarMeta(matchedById, rawColor) : undefined) ??
+      Array.from(referencedCalendarNames)
+        .map((name) => toCalendarMeta(name, rawColor))
+        .find((metaItem) => KNOWN_CALENDARS[metaItem.label.toLowerCase()]);
+
     const ownerCandidates = extractOwnerCandidates(eventRecord);
-    const inferredOwner =
-      meta.person ??
-      ownerCandidates[0] ??
-      inferOwnerFromText(
-        event.title,
-        event.notes,
-        rawLabel,
-        eventRecord.owner,
-        eventRecord.who,
-        eventRecord.owner_name,
-        eventRecord.organizer,
-        eventRecord.organizer_name,
-        eventRecord.created_by,
-        eventRecord.updated_by
-      );
-    const context = meta.context ?? (normalizedRawLabel || 'General Events');
+    const fallbackPerson = inferOwnerFromText(
+      event.title,
+      event.notes,
+      rawLabel,
+      eventRecord.owner,
+      eventRecord.who,
+      eventRecord.owner_name,
+      eventRecord.organizer,
+      eventRecord.organizer_name,
+      eventRecord.created_by,
+      eventRecord.updated_by
+    );
+
+    const inferredOwner = matchedLegend?.person ?? ownerCandidates[0] ?? fallbackPerson;
+    const personCalendar = inferredOwner ? toCalendarMeta(inferredOwner) : undefined;
+    const titleHintLabel = /resident chief/i.test(event.title) || /resident chief/i.test(event.notes ?? '')
+      ? 'ECC Resident Chief'
+      : /teaching/i.test(event.title) || /teaching/i.test(event.notes ?? '')
+        ? 'ECC Teaching'
+        : /service/i.test(event.title) || /service/i.test(event.notes ?? '')
+          ? 'General ECC Service'
+          : 'General Events';
+    const meta = matchedLegend ?? personCalendar ?? toCalendarMeta(normalizedRawLabel || titleHintLabel, rawColor);
+    const context = meta.context ?? 'General Events';
 
     if (shouldDebugUnmatchedOwners && !inferredOwner) {
       console.debug('Teamup event owner unmatched', {
@@ -447,17 +521,7 @@ function App() {
     };
   }, [viewMonth]);
 
-  const calendarLegend = useMemo(() => {
-    const legendMap = new Map<string, CalendarMeta>();
-    events.forEach((event) => {
-      const label = event.calendarLabel ?? event.context;
-      if (!label) return;
-      if (legendMap.has(label)) return;
-      legendMap.set(label, toCalendarMeta(label, event.calendarColor));
-    });
-
-    return Array.from(legendMap.values()).sort((a, b) => a.label.localeCompare(b.label));
-  }, [events]);
+  const calendarLegend = useMemo(() => LEGEND_CALENDARS, []);
 
   const availableContexts = useMemo(() => {
     const knownContexts = new Set<string>(EVENT_CONTEXTS);
@@ -592,12 +656,12 @@ function App() {
           const dayEvents = dayMap[iso] ?? [];
           return <button key={iso} type="button" className={['day-cell', isSelected ? 'day-selected' : '', inMonth ? '' : 'day-outside-month'].join(' ').trim()} onClick={() => setSelectedDate(day)}>
             <span className="day-number">{day.getDate()}</span>
-            {dayEvents.length > 0 && <div className="day-event-stack">{dayEvents.slice(0, 5).map((item) => <span key={item.id} className="day-event-pill" style={{ background: getEventColor(item) }}>{item.allDay ? item.title : `${formatDisplayTime(item.startTime).replace(' AM', 'a').replace(' PM', 'p')} ${item.title}`}</span>)}{dayEvents.length > 5 && <span className="day-event-more">+{dayEvents.length - 5} more</span>}</div>}
+            {dayEvents.length > 0 && <div className="day-event-stack">{dayEvents.slice(0, 5).map((item) => <span key={`${item.id}-${item.date}-${item.startTime ?? 'all-day'}`} className="day-event-pill" style={{ background: getEventColor(item) }}>{item.allDay ? item.title : `${formatDisplayTime(item.startTime).replace(' AM', 'a').replace(' PM', 'p')} ${item.title}`}</span>)}{dayEvents.length > 5 && <span className="day-event-more">+{dayEvents.length - 5} more</span>}</div>}
           </button>;
         })}</section>
         <aside className="day-sidebar">
           <h2>{formatIsoDate(selectedDate)}</h2>
-          {selectedDateEvents.length === 0 ? <p className="chart-empty">No events for this day.</p> : <div className="day-events">{selectedDateEvents.map((item) => <div key={item.id} className="event-chip" style={{ borderLeftColor: getEventColor(item), background: withAlpha(getEventColor(item), 0.22), color: '#e2e8f0' }}><strong>{item.allDay ? 'All day' : formatDisplayTime(item.startTime)}</strong> {item.title}</div>)}</div>}
+          {selectedDateEvents.length === 0 ? <p className="chart-empty">No events for this day.</p> : <div className="day-events">{selectedDateEvents.map((item) => <div key={`${item.id}-${item.date}-${item.startTime ?? 'all-day'}-sidebar`} className="event-chip" style={{ borderLeftColor: getEventColor(item), background: withAlpha(getEventColor(item), 0.22), color: '#e2e8f0' }}><strong>{item.allDay ? 'All day' : formatDisplayTime(item.startTime)}</strong> {item.title}</div>)}</div>}
         </aside>
       </section>
     </> : <section className="insights-shell"><div className="insight-range"><label>Start<input type="date" value={insightRangeStart} onChange={(event) => setInsightRangeStart(event.target.value)} max={insightRangeEnd} /></label><label>End<input type="date" value={insightRangeEnd} onChange={(event) => setInsightRangeEnd(event.target.value)} min={insightRangeStart} /></label></div><div className="insight-grid"><article className="insight-card"><h3>1) Hours Over Time</h3><LineChart data={insights.hoursByDay} /></article><article className="insight-card"><h3>2) Hours by Doctor</h3><BarChart data={insights.hoursByPerson} /></article><article className="insight-card"><h3>3) Weekday vs Weekend Hours</h3><BarChart data={insights.weekdayWeekend} /></article><article className="insight-card"><h3>4) Most Hours per Month Ranking</h3><BarChart data={insights.monthRanking} /></article><article className="insight-card"><h3>5) Consecutive Workday Max</h3><BarChart data={insights.workDayStreaks} /></article><article className="insight-card"><h3>6) Consecutive Days Off Max</h3><BarChart data={insights.dayOffStreaks} /></article><article className="insight-card"><h3>7) Start Time Distribution</h3><BarChart data={insights.startHourBuckets} /></article><article className="insight-card"><h3>8) Hours by Day of Week</h3><BarChart data={insights.weekdayHours} /></article><article className="insight-card"><h3>9) Overtime Days (&gt;8h)</h3><BarChart data={insights.overtimeCounts} /></article><article className="insight-card"><h3>10) Highest Load Days</h3><BarChart data={insights.topHeavyDays} /></article></div></section>}
