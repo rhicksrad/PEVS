@@ -5,7 +5,7 @@ import { resolveInferredOwner } from './ownerResolution';
 describe('resolveInferredOwner', () => {
   it('prefers subcalendar person over text/alias fallback when structured owner is absent', () => {
     const result = resolveInferredOwner({
-      matchedLegendPerson: 'Paula Johnson',
+      explicitCalendarPerson: 'Paula Johnson',
       fallbackPerson: 'Liz Thomovsky',
       warn: vi.fn()
     });
@@ -18,7 +18,7 @@ describe('resolveInferredOwner', () => {
     const warn = vi.fn();
 
     const result = resolveInferredOwner({
-      matchedLegendPerson: 'Paula Johnson',
+      explicitCalendarPerson: 'Paula Johnson',
       fallbackPerson: 'Liz Thomovsky',
       eventId: 'evt-456',
       eventTitle: 'Follow-up shift',
@@ -28,11 +28,11 @@ describe('resolveInferredOwner', () => {
     expect(result).toBe('Paula Johnson');
     expect(warn).toHaveBeenCalledTimes(1);
     expect(warn).toHaveBeenCalledWith(
-      'Teamup event owner conflict: using subcalendar owner over text inference',
+      'Teamup event owner conflict: using explicit calendar owner over text inference',
       expect.objectContaining({
         id: 'evt-456',
         title: 'Follow-up shift',
-        matchedLegendPerson: 'Paula Johnson',
+        explicitCalendarPerson: 'Paula Johnson',
         fallbackPerson: 'Liz Thomovsky'
       })
     );
@@ -43,7 +43,7 @@ describe('resolveInferredOwner', () => {
     const result = resolveInferredOwner({
       structuredOwner: 'Paula Johnson',
       fallbackPerson: 'Liz Thomovsky',
-      matchedLegendPerson: 'Paula Johnson',
+      explicitCalendarPerson: 'Paula Johnson',
       eventId: 'evt-123',
       eventTitle: 'Coverage shift',
       warn
@@ -63,16 +63,52 @@ describe('resolveInferredOwner', () => {
   });
 
   it('falls back to subcalendar person when no explicit owner hints are present', () => {
+    const warn = vi.fn();
     const result = resolveInferredOwner({
-      matchedLegendPerson: 'Paula Johnson'
+      idDerivedPerson: 'Paula Johnson',
+      eventId: 'evt-late-shift',
+      eventTitle: 'Late shift',
+      warn
     });
 
     expect(result).toBe('Paula Johnson');
+    expect(warn).toHaveBeenCalledWith(
+      'Teamup event owner inferred from subcalendar-id mapping only; verify Teamup subcalendar metadata',
+      expect.objectContaining({
+        id: 'evt-late-shift',
+        title: 'Late shift',
+        idDerivedPerson: 'Paula Johnson'
+      })
+    );
+  });
+
+  it('warns loudly when id-derived owner conflicts with explicit owner signal', () => {
+    const warn = vi.fn();
+
+    const result = resolveInferredOwner({
+      idDerivedPerson: 'Liz Thomovsky',
+      explicitCalendarPerson: 'Paula Johnson',
+      eventId: 'evt-late-shift-stale-map',
+      eventTitle: 'Late shift',
+      warn
+    });
+
+    expect(result).toBe('Paula Johnson');
+    expect(warn).toHaveBeenCalledWith(
+      'Teamup event owner conflict: subcalendar-id mapping disagrees with explicit owner signal',
+      expect.objectContaining({
+        id: 'evt-late-shift-stale-map',
+        title: 'Late shift',
+        idDerivedPerson: 'Liz Thomovsky',
+        explicitSignalPerson: 'Paula Johnson'
+      })
+    );
   });
 
   it('returns undefined for non-person calendars without owner hints', () => {
     const result = resolveInferredOwner({
-      matchedLegendPerson: undefined,
+      explicitCalendarPerson: undefined,
+      idDerivedPerson: undefined,
       structuredOwner: undefined,
       fallbackPerson: undefined
     });
