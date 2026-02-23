@@ -11,6 +11,7 @@ import {
 } from './lib/date';
 import { fetchEvents, type TeamupEvent } from './lib/teamupApi';
 import { validateScheduleEvents } from './lib/scheduleValidation';
+import { resolveInferredOwner } from './lib/ownerResolution';
 
 type ScheduleCategory = 'shift' | 'teaching' | 'admin' | 'milestone';
 type TeamMember = 'Aimee Brooks' | 'Ana Aghili' | 'Liz Thomovsky' | 'Paula Johnson';
@@ -333,7 +334,7 @@ function parseDateTimeParts(value: string): { date: string; time?: string } | nu
   return null;
 }
 
-function convertTeamupEvents(teamupEvents: TeamupEvent[]): ScheduleEvent[] {
+export function convertTeamupEvents(teamupEvents: TeamupEvent[]): ScheduleEvent[] {
   const mapped: ScheduleEvent[] = [];
   const shouldDebugUnmatchedOwners = false && import.meta.env.DEV;
 
@@ -413,7 +414,13 @@ function convertTeamupEvents(teamupEvents: TeamupEvent[]): ScheduleEvent[] {
       eventRecord.updated_by
     );
 
-    const inferredOwner = matchedLegend?.person ?? ownerCandidates[0] ?? fallbackPerson;
+    const inferredOwner = resolveInferredOwner<TeamMember>({
+      structuredOwner: ownerCandidates[0],
+      fallbackPerson,
+      matchedLegendPerson: matchedLegend?.person,
+      eventId: event.id,
+      eventTitle: event.title
+    });
     const personCalendar = inferredOwner ? toCalendarMeta(inferredOwner) : undefined;
     const titleHintLabel = /resident chief/i.test(event.title) || /resident chief/i.test(event.notes ?? '')
       ? 'ECC Resident Chief'
