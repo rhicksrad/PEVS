@@ -96,9 +96,9 @@ const KNOWN_CALENDARS: Record<string, Omit<CalendarMeta, 'label'>> = {
 
 const SUBCALENDAR_ID_TO_LABEL: Record<number, string> = {
   432033: 'Aimee Brooks',
-  432034: 'Ana Aghili',
+  432034: 'Paula Johnson',
   432049: 'Liz Thomovsky',
-  2346358: 'Paula Johnson',
+  2346358: 'Ana Aghili',
   2346351: 'ECC Teaching',
   432050: 'General ECC Service',
   6541026: 'General Events'
@@ -293,15 +293,38 @@ function getEventHours(event: ScheduleEvent) {
 }
 
 function toLocalDateKey(value: string) {
-  if (typeof value !== 'string' || value.length < 10) return null;
-  const datePart = value.slice(0, 10);
-  return /^\d{4}-\d{2}-\d{2}$/.test(datePart) ? datePart : null;
+  return parseDateTimeParts(value)?.date ?? null;
 }
 
 function toLocalTime(value?: string) {
-  if (!value || value.length < 16) return undefined;
-  const timePart = value.slice(11, 16);
-  return /^([01]\d|2[0-3]):([0-5]\d)$/.test(timePart) ? timePart : undefined;
+  if (!value) return undefined;
+  return parseDateTimeParts(value)?.time;
+}
+
+function parseDateTimeParts(value: string): { date: string; time?: string } | null {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  const isoMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T\s](\d{2}):(\d{2}))?/);
+  if (isoMatch) {
+    const [, year, month, day, hour, minute] = isoMatch;
+    return {
+      date: `${year}-${month}-${day}`,
+      time: hour && minute ? `${hour}:${minute}` : undefined
+    };
+  }
+
+  const compactMatch = trimmed.match(/^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2}))?/);
+  if (compactMatch) {
+    const [, year, month, day, hour, minute] = compactMatch;
+    return {
+      date: `${year}-${month}-${day}`,
+      time: hour && minute ? `${hour}:${minute}` : undefined
+    };
+  }
+
+  return null;
 }
 
 function convertTeamupEvents(teamupEvents: TeamupEvent[]): ScheduleEvent[] {
@@ -309,9 +332,6 @@ function convertTeamupEvents(teamupEvents: TeamupEvent[]): ScheduleEvent[] {
   const shouldDebugUnmatchedOwners = false && import.meta.env.DEV;
 
   teamupEvents.forEach((event) => {
-    const date = event.all_day ? event.start_dt.slice(0, 10) : toLocalDateKey(event.start_dt);
-    if (!date) return;
-
     const eventRecord = event as Record<string, unknown>;
     const subcalendar = eventRecord.subcalendar as Record<string, unknown> | undefined;
     const rawLabel =
@@ -407,6 +427,9 @@ function convertTeamupEvents(teamupEvents: TeamupEvent[]): ScheduleEvent[] {
         ownerCandidates
       });
     }
+
+    const date = toLocalDateKey(event.start_dt);
+    if (!date) return;
 
     mapped.push({
       id: String(event.id),
