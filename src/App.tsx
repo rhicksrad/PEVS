@@ -491,6 +491,7 @@ function LineChart({ data }: { data: NamedValue[] }) {
 function App() {
   const printableRef = useRef<HTMLDivElement>(null);
   const [events, setEvents] = useState<ScheduleEvent[]>([]);
+  const [apiEvents, setApiEvents] = useState<TeamupEvent[]>([]);
   const [isLoadingEvents, setIsLoadingEvents] = useState(true);
   const [loadError, setLoadError] = useState<string>('');
   const [viewMonth, setViewMonth] = useState(DEFAULT_MONTH);
@@ -527,6 +528,7 @@ function App() {
         if (isCancelled) return;
         setValidationIssues(validation.issues);
         setLoadError('');
+        setApiEvents(fetchedEvents);
         setEvents(normalized);
         localStorage.setItem(
           STORAGE_KEY,
@@ -535,6 +537,7 @@ function App() {
       } catch (error) {
         if (isCancelled) return;
         setValidationIssues([]);
+        setApiEvents([]);
         setEvents([]);
         setLoadError(error instanceof Error ? error.message : 'Unable to load Teamup data.');
       } finally {
@@ -600,7 +603,12 @@ function App() {
     return acc;
   }, {}), [filteredEvents]);
 
-  const selectedDateEvents = dayMap[formatIsoDate(selectedDate)] ?? [];
+  const selectedDateApiEvents = useMemo(() => {
+    const selectedIsoDate = formatIsoDate(selectedDate);
+    return [...apiEvents]
+      .filter((event) => toLocalDateKey(event.start_dt) === selectedIsoDate)
+      .sort((a, b) => (toLocalTime(a.start_dt) ?? '99:99').localeCompare(toLocalTime(b.start_dt) ?? '99:99'));
+  }, [apiEvents, selectedDate]);
   const days = monthGridDays;
 
   const insightEvents = useMemo(() => filteredEvents.filter((event) => event.date >= insightRangeStart && event.date <= insightRangeEnd), [filteredEvents, insightRangeStart, insightRangeEnd]);
@@ -692,7 +700,11 @@ function App() {
         </section>
         <aside className="day-sidebar">
           <h2>{formatIsoDate(selectedDate)}</h2>
-          {selectedDateEvents.length === 0 ? <p className="chart-empty">No events for this day.</p> : <div className="day-events">{selectedDateEvents.map((item) => <div key={`${item.id}-${item.date}-${item.startTime ?? 'all-day'}-sidebar`} className="event-chip" style={{ borderLeftColor: getEventColor(item), background: withAlpha(getEventColor(item), 0.22), color: '#e2e8f0' }}><strong>{item.allDay ? 'All day' : formatDisplayTime(item.startTime)}</strong> {item.title}</div>)}</div>}
+          {selectedDateApiEvents.length === 0 ? <p className="chart-empty">No events from API for this day.</p> : <div className="day-events">{selectedDateApiEvents.map((item) => {
+            const apiEventTime = item.all_day ? 'All day' : formatDisplayTime(toLocalTime(item.start_dt));
+            const subcalendarText = item.subcalendar_id ? ` • subcalendar ${item.subcalendar_id}` : '';
+            return <div key={`${item.id}-${item.start_dt}-sidebar`} className="event-chip" style={{ borderLeftColor: '#38bdf8', background: withAlpha('#38bdf8', 0.22), color: '#e2e8f0' }}><strong>{apiEventTime}</strong> {item.title}<br /><small>ID {item.id}{subcalendarText}</small></div>;
+          })}</div>}
         </aside>
       </section>
     </> : <section className="insights-shell"><div className="insight-range"><label>Start<input type="date" value={insightRangeStart} onChange={(event) => setInsightRangeStart(event.target.value)} max={insightRangeEnd} /></label><label>End<input type="date" value={insightRangeEnd} onChange={(event) => setInsightRangeEnd(event.target.value)} min={insightRangeStart} /></label></div><div className="insight-grid"><article className="insight-card"><h3>1) Hours Over Time</h3><LineChart data={insights.hoursByDay} /></article><article className="insight-card"><h3>2) Hours by Doctor</h3><BarChart data={insights.hoursByPerson} /></article><article className="insight-card"><h3>3) Weekday vs Weekend Hours</h3><BarChart data={insights.weekdayWeekend} /></article><article className="insight-card"><h3>4) Most Hours per Month Ranking</h3><BarChart data={insights.monthRanking} /></article><article className="insight-card"><h3>5) Consecutive Workday Max</h3><BarChart data={insights.workDayStreaks} /></article><article className="insight-card"><h3>6) Consecutive Days Off Max</h3><BarChart data={insights.dayOffStreaks} /></article><article className="insight-card"><h3>7) Start Time Distribution</h3><BarChart data={insights.startHourBuckets} /></article><article className="insight-card"><h3>8) Hours by Day of Week</h3><BarChart data={insights.weekdayHours} /></article><article className="insight-card"><h3>9) Overtime Days (&gt;8h)</h3><BarChart data={insights.overtimeCounts} /></article><article className="insight-card"><h3>10) Highest Load Days</h3><BarChart data={insights.topHeavyDays} /></article></div></section>}
