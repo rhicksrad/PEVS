@@ -505,6 +505,7 @@ function App() {
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const [validationIssues, setValidationIssues] = useState<string[]>([]);
   const [view, setView] = useState<AppView>('calendar');
+  const [isCompactMode, setIsCompactMode] = useState(false);
 
   const monthGridDays = useMemo(() => getCalendarGridDays(viewMonth), [viewMonth]);
 
@@ -619,6 +620,24 @@ function App() {
   }, [apiEvents, selectedDate]);
   const days = monthGridDays;
 
+  const monthIsoPrefix = `${viewMonth.getFullYear()}-${String(viewMonth.getMonth() + 1).padStart(2, '0')}`;
+  const monthFilteredEvents = useMemo(
+    () => filteredEvents.filter((event) => event.date.startsWith(monthIsoPrefix)),
+    [filteredEvents, monthIsoPrefix]
+  );
+  const totalVisibleHours = useMemo(
+    () => monthFilteredEvents.reduce((sum, event) => sum + getEventHours(event), 0),
+    [monthFilteredEvents]
+  );
+  const busiestDay = useMemo(() => {
+    const totals = monthFilteredEvents.reduce<Record<string, number>>((acc, event) => {
+      acc[event.date] = (acc[event.date] ?? 0) + getEventHours(event);
+      return acc;
+    }, {});
+    const [date, hours] = Object.entries(totals).sort((a, b) => b[1] - a[1])[0] ?? [];
+    return date && typeof hours === 'number' ? { date, hours } : undefined;
+  }, [monthFilteredEvents]);
+
   const insightEvents = useMemo(() => filteredEvents.filter((event) => event.date >= insightRangeStart && event.date <= insightRangeEnd), [filteredEvents, insightRangeStart, insightRangeEnd]);
   const insightDays = useMemo(() => getDateRange(insightRangeStart, insightRangeEnd), [insightRangeStart, insightRangeEnd]);
 
@@ -661,6 +680,16 @@ function App() {
   const togglePerson = (person: TeamMember) => setSelectedPeople((current) => (current.includes(person) ? current.filter((item) => item !== person) : [...current, person]));
   const toggleCalendar = (label: string) => setSelectedCalendars((current) => (current.includes(label) ? current.filter((item) => item !== label) : [...current, label]));
   const toggleContext = (context: string) => setSelectedContexts((current) => (current.includes(context) ? current.filter((item) => item !== context) : [...current, context]));
+  const jumpToToday = () => {
+    const today = new Date();
+    setViewMonth(new Date(today.getFullYear(), today.getMonth(), 1));
+    setSelectedDate(today);
+  };
+  const resetFilters = () => {
+    setSelectedPeople([...TEAM]);
+    setSelectedContexts([...availableContexts]);
+    setSelectedCalendars(calendarLegend.map((item) => item.label));
+  };
 
   const downloadDisplayedScreen = async () => {
     if (!printableRef.current || isExportingPdf) return;
@@ -674,16 +703,25 @@ function App() {
     } finally { setIsExportingPdf(false); }
   };
 
-  return <main className="app-shell" ref={printableRef}>
+  return <main className={['app-shell', isCompactMode ? 'compact-density' : ''].join(' ').trim()} ref={printableRef}>
     <section className="top-bar">
       <header className="calendar-header">
-        <div className="header-title-wrap"><h1>{view === 'calendar' ? formatMonthYear(viewMonth) : 'Schedule Insights'}</h1>{view === 'calendar' && <div className="month-nav-actions"><button type="button" onClick={() => setViewMonth((current) => new Date(current.getFullYear(), current.getMonth() - 1, 1))}>Prev</button><button type="button" onClick={() => setViewMonth((current) => new Date(current.getFullYear(), current.getMonth() + 1, 1))}>Next</button></div>}</div>
+        <div className="header-title-wrap"><h1>{view === 'calendar' ? formatMonthYear(viewMonth) : 'Schedule Insights'}</h1>{view === 'calendar' && <div className="month-nav-actions"><button type="button" onClick={() => setViewMonth((current) => new Date(current.getFullYear(), current.getMonth() - 1, 1))}>Prev</button><button type="button" onClick={jumpToToday}>Today</button><button type="button" onClick={() => setViewMonth((current) => new Date(current.getFullYear(), current.getMonth() + 1, 1))}>Next</button></div>}</div>
         <div className="calendar-actions">
           <button type="button" className={view === 'calendar' ? 'tab-active' : ''} onClick={() => setView('calendar')}>Calendar</button>
           <button type="button" className={view === 'insights' ? 'tab-active' : ''} onClick={() => setView('insights')}>Insights</button>
+          <button type="button" onClick={() => setIsCompactMode((current) => !current)}>{isCompactMode ? 'Comfortable' : 'Compact'} mode</button>
+          <button type="button" onClick={resetFilters}>Reset filters</button>
           <button type="button" onClick={downloadDisplayedScreen} disabled={isExportingPdf}>{isExportingPdf ? 'Building PDF…' : 'Download PDF'}</button>
         </div>
       </header>
+
+      <section className="stats-strip" aria-label="Quick summary">
+        <article className="stat-card"><span>Total visible events</span><strong>{monthFilteredEvents.length}</strong></article>
+        <article className="stat-card"><span>Scheduled hours</span><strong>{totalVisibleHours.toFixed(1)}h</strong></article>
+        <article className="stat-card"><span>Team members selected</span><strong>{selectedPeople.length}/{TEAM.length}</strong></article>
+        <article className="stat-card"><span>Busiest day</span><strong>{busiestDay ? `${busiestDay.date} • ${busiestDay.hours.toFixed(1)}h` : 'No events'}</strong></article>
+      </section>
 
       <section className="toolbar compact-toolbar">
         {validationIssues.length > 0 && <div className="warning-banner" role="status"><strong>Schedule warnings:</strong> {validationIssues.length} issue(s) detected. Resolve owner mapping for Teamup events when applicable.{validationIssues.length > 0 && <ul>{validationIssues.slice(0, 3).map((issue) => <li key={issue}>{issue}</li>)}{validationIssues.length > 3 && <li>+{validationIssues.length - 3} more issue(s) in console.</li>}</ul>}</div>}
