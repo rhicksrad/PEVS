@@ -9,7 +9,7 @@ import {
   isSameDay,
   isSameMonth
 } from './lib/date';
-import { fetchEvents, type TeamupEvent } from './lib/teamupApi';
+import { fetchEvents, fetchSubcalendarLabels, type TeamupEvent } from './lib/teamupApi';
 import { validateScheduleEvents } from './lib/scheduleValidation';
 import { resolveInferredOwner } from './lib/ownerResolution';
 
@@ -99,17 +99,6 @@ const KNOWN_CALENDARS: Record<string, Omit<CalendarMeta, 'label'>> = {
   'ecc resident chief': { color: '#a63a8d', kind: 'other' }
 };
 
-
-// Fallback-only mapping when payload does not include calendar names; keep in sync with Teamup if used.
-const SUBCALENDAR_ID_TO_LABEL: Record<number, string> = {
-  432033: 'Aimee Brooks',
-  432034: 'Paula Johnson',
-  432049: 'Liz Thomovsky',
-  2346358: 'Ana Aghili',
-  2346351: 'ECC Teaching',
-  432050: 'General ECC Service',
-  6541026: 'General Events'
-};
 
 const PERSON_ALIASES: Record<TeamMember, string[]> = {
   'Aimee Brooks': ['aimee brooks', 'aimee', 'brooks', 'abrooks', 'brooks, aimee', 'a brooks', 'ab'],
@@ -334,7 +323,7 @@ function parseDateTimeParts(value: string): { date: string; time?: string } | nu
   return null;
 }
 
-export function convertTeamupEvents(teamupEvents: TeamupEvent[]): ScheduleEvent[] {
+export function convertTeamupEvents(teamupEvents: TeamupEvent[], subcalendarIdToLabel: Record<number, string> = {}): ScheduleEvent[] {
   const mapped: ScheduleEvent[] = [];
   const shouldDebugUnmatchedOwners = false && import.meta.env.DEV;
 
@@ -391,7 +380,7 @@ export function convertTeamupEvents(teamupEvents: TeamupEvent[]): ScheduleEvent[
     }
 
     const matchedById = Array.from(referencedCalendarIds)
-      .map((id) => SUBCALENDAR_ID_TO_LABEL[id])
+      .map((id) => subcalendarIdToLabel[id])
       .find((label): label is string => Boolean(label));
 
     const matchedByName = Array.from(referencedCalendarNames)
@@ -417,7 +406,8 @@ export function convertTeamupEvents(teamupEvents: TeamupEvent[]): ScheduleEvent[
     const inferredOwner = resolveInferredOwner<TeamMember>({
       structuredOwner: ownerCandidates[0],
       fallbackPerson,
-      matchedLegendPerson: matchedLegend?.person,
+      explicitCalendarPerson: matchedByName?.person,
+      idDerivedPerson: matchedById ? toCalendarMeta(matchedById, rawColor).person : undefined,
       eventId: event.id,
       eventTitle: event.title
     });
@@ -501,6 +491,7 @@ function App() {
   const [events, setEvents] = useState<ScheduleEvent[]>([]);
   const [apiEvents, setApiEvents] = useState<TeamupEvent[]>([]);
   const [isLoadingEvents, setIsLoadingEvents] = useState(true);
+  const [subcalendarLabels, setSubcalendarLabels] = useState<Record<number, string>>({});
   const [loadError, setLoadError] = useState<string>('');
   const [viewMonth, setViewMonth] = useState(DEFAULT_MONTH);
   const [selectedDate, setSelectedDate] = useState<Date>(DEFAULT_MONTH);
@@ -534,13 +525,17 @@ function App() {
     const loadMonthEvents = async () => {
       setIsLoadingEvents(true);
       try {
-        const fetchedEvents = await fetchEvents(monthStart, monthEnd);
-        const normalized = convertTeamupEvents(fetchedEvents);
+        const [fetchedEvents, fetchedSubcalendarLabels] = await Promise.all([
+          fetchEvents(monthStart, monthEnd),
+          fetchSubcalendarLabels()
+        ]);
+        const normalized = convertTeamupEvents(fetchedEvents, fetchedSubcalendarLabels);
         const validation = validateScheduleEvents(normalized);
         if (isCancelled) return;
         setValidationIssues(validation.issues);
         setLoadError('');
         setApiEvents(fetchedEvents);
+        setSubcalendarLabels(fetchedSubcalendarLabels);
         setEvents(normalized);
         localStorage.setItem(
           STORAGE_KEY,
@@ -723,7 +718,7 @@ function App() {
             const apiEventTime = item.all_day ? 'All day' : `${formatDisplayTime(apiStartTime)} - ${formatDisplayTime(apiEndTime)}`;
             const durationHours = item.all_day ? undefined : hoursBetween(apiStartTime, apiEndTime);
             const trimmedSubcalendarName = typeof item.subcalendar_name === 'string' ? item.subcalendar_name.trim() : '';
-            const mappedSubcalendarLabel = item.subcalendar_id ? SUBCALENDAR_ID_TO_LABEL[item.subcalendar_id] : undefined;
+            const mappedSubcalendarLabel = item.subcalendar_id ? subcalendarLabels[item.subcalendar_id] : undefined;
             const resolvedSubcalendarLabel = trimmedSubcalendarName || mappedSubcalendarLabel || (item.subcalendar_id ? `subcalendar ${item.subcalendar_id}` : '');
             const subcalendarText = resolvedSubcalendarLabel ? ` • ${resolvedSubcalendarLabel}` : '';
             const locationText = typeof item.location === 'string' && item.location.trim() ? item.location.trim() : undefined;

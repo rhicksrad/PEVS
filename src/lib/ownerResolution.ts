@@ -1,7 +1,8 @@
 export type OwnerResolutionArgs<TPerson extends string> = {
   structuredOwner?: TPerson;
   fallbackPerson?: TPerson;
-  matchedLegendPerson?: TPerson;
+  explicitCalendarPerson?: TPerson;
+  idDerivedPerson?: TPerson;
   eventId?: string;
   eventTitle?: string;
   warn?: (message: string, details: Record<string, unknown>) => void;
@@ -10,7 +11,8 @@ export type OwnerResolutionArgs<TPerson extends string> = {
 export function resolveInferredOwner<TPerson extends string>({
   structuredOwner,
   fallbackPerson,
-  matchedLegendPerson,
+  explicitCalendarPerson,
+  idDerivedPerson,
   eventId,
   eventTitle,
   warn = console.warn
@@ -24,14 +26,35 @@ export function resolveInferredOwner<TPerson extends string>({
     });
   }
 
-  if (!structuredOwner && matchedLegendPerson && fallbackPerson && matchedLegendPerson !== fallbackPerson) {
-    warn('Teamup event owner conflict: using subcalendar owner over text inference', {
+  const explicitSignalPerson = structuredOwner ?? fallbackPerson ?? explicitCalendarPerson;
+
+  if (!structuredOwner && explicitCalendarPerson && fallbackPerson && explicitCalendarPerson !== fallbackPerson) {
+    warn('Teamup event owner conflict: using explicit calendar owner over text inference', {
       id: eventId,
       title: eventTitle,
-      matchedLegendPerson,
+      explicitCalendarPerson,
       fallbackPerson
     });
   }
 
-  return structuredOwner ?? matchedLegendPerson ?? fallbackPerson;
+  if (idDerivedPerson && explicitSignalPerson && idDerivedPerson !== explicitSignalPerson) {
+    warn('Teamup event owner conflict: subcalendar-id mapping disagrees with explicit owner signal', {
+      id: eventId,
+      title: eventTitle,
+      idDerivedPerson,
+      explicitSignalPerson
+    });
+  }
+
+  const resolved = structuredOwner ?? explicitCalendarPerson ?? fallbackPerson ?? idDerivedPerson;
+
+  if (!structuredOwner && !fallbackPerson && !explicitCalendarPerson && idDerivedPerson && resolved === idDerivedPerson) {
+    warn('Teamup event owner inferred from subcalendar-id mapping only; verify Teamup subcalendar metadata', {
+      id: eventId,
+      title: eventTitle,
+      idDerivedPerson
+    });
+  }
+
+  return resolved;
 }
