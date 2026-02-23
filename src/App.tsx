@@ -247,7 +247,7 @@ function toCalendarMeta(label: string, eventColor?: string): CalendarMeta {
 
   return {
     label: normalizedLabel,
-    color: eventColor ?? known.color,
+    color: known.color,
     kind: known.kind,
     person: known.person,
     context: known.context
