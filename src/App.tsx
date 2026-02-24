@@ -642,7 +642,7 @@ function App() {
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const [validationIssues, setValidationIssues] = useState<string[]>([]);
   const [view, setView] = useState<AppView>('calendar');
-  const [isCompactMode, setIsCompactMode] = useState(false);
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
 
   const monthGridDays = useMemo(() => getCalendarGridDays(viewMonth), [viewMonth]);
 
@@ -839,35 +839,45 @@ function App() {
     } finally { setIsExportingPdf(false); }
   };
 
-  return <main className={['app-shell', isCompactMode ? 'compact-density' : ''].join(' ').trim()} ref={printableRef}>
+  return <main className="app-shell" ref={printableRef}>
     <section className="top-bar">
       <header className="calendar-header">
         <div className="header-title-wrap"><h1>{view === 'calendar' ? formatMonthYear(viewMonth) : 'Schedule Insights'}</h1>{view === 'calendar' && <div className="month-nav-actions"><button type="button" onClick={() => setViewMonth((current) => new Date(current.getFullYear(), current.getMonth() - 1, 1))}>Prev</button><button type="button" onClick={jumpToToday}>Today</button><button type="button" onClick={() => setViewMonth((current) => new Date(current.getFullYear(), current.getMonth() + 1, 1))}>Next</button></div>}</div>
         <div className="calendar-actions">
           <button type="button" className={view === 'calendar' ? 'tab-active' : ''} onClick={() => setView('calendar')}>Calendar</button>
           <button type="button" className={view === 'insights' ? 'tab-active' : ''} onClick={() => setView('insights')}>Insights</button>
-          <button type="button" onClick={() => setIsCompactMode((current) => !current)}>{isCompactMode ? 'Comfortable' : 'Compact'} mode</button>
-          <button type="button" onClick={resetFilters}>Reset filters</button>
+          <button type="button" className={isFiltersOpen ? 'tab-active' : ''} onClick={() => setIsFiltersOpen((current) => !current)}>Filters</button>
           <button type="button" onClick={downloadDisplayedScreen} disabled={isExportingPdf}>{isExportingPdf ? 'Building PDF…' : 'Download PDF'}</button>
         </div>
       </header>
-
-      <section className="stats-strip" aria-label="Quick summary">
-        <article className="stat-card"><span>Total visible events</span><strong>{monthFilteredEvents.length}</strong></article>
-        <article className="stat-card"><span>Scheduled hours</span><strong>{totalVisibleHours.toFixed(1)}h</strong></article>
-        <article className="stat-card"><span>Team members selected</span><strong>{selectedPeople.length}/{TEAM.length}</strong></article>
-        <article className="stat-card"><span>Busiest day</span><strong>{busiestDay ? `${busiestDay.date} • ${busiestDay.hours.toFixed(1)}h` : 'No events'}</strong></article>
-      </section>
 
       <section className="toolbar compact-toolbar">
         {validationIssues.length > 0 && <div className="warning-banner" role="status"><strong>Schedule warnings:</strong> {validationIssues.length} issue(s) detected. Resolve owner mapping for Teamup events when applicable.{validationIssues.length > 0 && <ul>{validationIssues.slice(0, 3).map((issue) => <li key={issue}>{issue}</li>)}{validationIssues.length > 3 && <li>+{validationIssues.length - 3} more issue(s) in console.</li>}</ul>}</div>}
         {loadError && <div className="warning-banner" role="status"><strong>Unable to load events:</strong> {loadError}</div>}
 
-        {calendarLegend.length > 0 && <div className="filter-strip"><span className="filter-label">Calendars</span><div className="bubble-row">{calendarLegend.map((calendar) => { const active = selectedCalendars.includes(calendar.label); return <button key={calendar.label} type="button" className={['person-bubble', active ? 'is-active' : ''].join(' ').trim()} style={{ borderColor: calendar.color, color: calendar.color, background: active ? `${calendar.color}33` : 'rgba(15, 23, 42, 0.85)' }} onClick={() => toggleCalendar(calendar.label)}>{calendar.label}</button>; })}</div></div>}
+        {isFiltersOpen && <><button type="button" className="filters-backdrop" aria-label="Close filters" onClick={() => setIsFiltersOpen(false)} /><div className="filters-overlay" role="dialog" aria-label="Filters">
+          <div className="filters-overlay-header">
+            <strong>Filters</strong>
+            <button type="button" onClick={resetFilters}>Reset filters</button>
+          </div>
 
-        <div className="filter-strip"><span className="filter-label">Team</span><div className="bubble-row">{TEAM.map((person) => { const active = selectedPeople.includes(person); const color = FILTER_COLORS[person] ?? PERSON_COLORS[person]; return <button key={person} type="button" className={['person-bubble', active ? 'is-active' : ''].join(' ').trim()} style={{ borderColor: color, color, background: active ? `${color}33` : 'rgba(15, 23, 42, 0.85)' }} onClick={() => togglePerson(person)}>{person}</button>; })}</div></div>
+          {calendarLegend.length > 0 && <fieldset className="filters-group"><legend>Calendars</legend><div className="filters-options">{calendarLegend.map((calendar) => {
+            const active = selectedCalendars.includes(calendar.label);
+            return <label key={calendar.label} className="filter-checkbox"><input type="checkbox" checked={active} onChange={() => toggleCalendar(calendar.label)} /><span className="filter-swatch" style={{ background: calendar.color }} />{calendar.label}</label>;
+          })}</div></fieldset>}
 
-        <div className="filter-strip"><span className="filter-label">Shifts</span><div className="bubble-row">{availableContexts.map((context) => { const active = selectedContexts.includes(context); const color = FILTER_COLORS[context]; return <button key={context} type="button" className={['person-bubble', active ? 'is-active' : ''].join(' ').trim()} style={color ? { borderColor: color, color, background: active ? `${color}33` : 'rgba(15, 23, 42, 0.85)' } : undefined} onClick={() => toggleContext(context)}>{context}</button>; })}</div></div>
+          <fieldset className="filters-group"><legend>Team</legend><div className="filters-options">{TEAM.map((person) => {
+            const active = selectedPeople.includes(person);
+            const color = FILTER_COLORS[person] ?? PERSON_COLORS[person];
+            return <label key={person} className="filter-checkbox"><input type="checkbox" checked={active} onChange={() => togglePerson(person)} /><span className="filter-swatch" style={{ background: color }} />{person}</label>;
+          })}</div></fieldset>
+
+          <fieldset className="filters-group"><legend>Shifts</legend><div className="filters-options">{availableContexts.map((context) => {
+            const active = selectedContexts.includes(context);
+            const color = FILTER_COLORS[context] ?? '#64748b';
+            return <label key={context} className="filter-checkbox"><input type="checkbox" checked={active} onChange={() => toggleContext(context)} /><span className="filter-swatch" style={{ background: color }} />{context}</label>;
+          })}</div></fieldset>
+        </div></>}
       </section>
     </section>
 
@@ -917,6 +927,12 @@ function App() {
           <label>End<input type="date" value={insightRangeEnd} onChange={(event) => setInsightRangeEnd(event.target.value)} min={insightRangeStart} /></label>
         </div>
       </div>
+      <section className="stats-strip" aria-label="Quick summary">
+        <article className="stat-card"><span>Total visible events</span><strong>{monthFilteredEvents.length}</strong></article>
+        <article className="stat-card"><span>Scheduled hours</span><strong>{totalVisibleHours.toFixed(1)}h</strong></article>
+        <article className="stat-card"><span>Team members selected</span><strong>{selectedPeople.length}/{TEAM.length}</strong></article>
+        <article className="stat-card"><span>Busiest day</span><strong>{busiestDay ? `${busiestDay.date} • ${busiestDay.hours.toFixed(1)}h` : 'No events'}</strong></article>
+      </section>
       <div className="insight-grid">
         <article className="insight-card insight-card-feature"><h3>Hours Over Time</h3><LineChart data={insights.hoursByDay} /></article>
         <article className="insight-card"><h3>Average Hours per Week by Doctor</h3><BarChart data={insights.averageHoursPerWeekByPerson} /></article>
