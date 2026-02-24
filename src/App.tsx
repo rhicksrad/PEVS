@@ -647,7 +647,9 @@ function App() {
   const monthGridDays = useMemo(() => getCalendarGridDays(viewMonth), [viewMonth]);
 
   useEffect(() => {
-    setSelectedDate(new Date(viewMonth.getFullYear(), viewMonth.getMonth(), 1));
+    setSelectedDate((current) => (isSameMonth(current, viewMonth)
+      ? current
+      : new Date(viewMonth.getFullYear(), viewMonth.getMonth(), 1)));
   }, [viewMonth]);
   const insightDefaultStart = formatIsoDate(monthGridDays[0]);
   const insightDefaultEnd = formatIsoDate(monthGridDays[monthGridDays.length - 1]);
