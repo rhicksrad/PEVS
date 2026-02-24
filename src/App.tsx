@@ -117,6 +117,8 @@ const LATE_SHIFT_PATTERN = /\b(late|evening|night)\b/i;
 const EARLY_SHIFT_PATTERN = /\b(early|morning)\b/i;
 const PM_SHIFT_PATTERN = /\bpm\b/i;
 const AM_SHIFT_PATTERN = /\bam\b/i;
+const TEACHING_CONTEXT_PATTERN = /\bteaching\b/i;
+const LEADING_OWNER_TOKEN_PATTERN = /^\s*([a-z]{2,})\s*(?:[-:|]|\b)/i;
 
 const withAlpha = (hex: string, alpha: number) => {
   const value = hex.replace('#', '');
@@ -153,6 +155,13 @@ function inferOwnerFromText(...values: Array<unknown>): TeamMember | undefined {
   });
 
   return matchedAlias ? PERSON_ALIAS_MAP[matchedAlias] : undefined;
+}
+
+function inferOwnerFromTeachingTitle(title: string, isTeachingEvent: boolean): TeamMember | undefined {
+  if (!isTeachingEvent) return undefined;
+  const tokenMatch = title.match(LEADING_OWNER_TOKEN_PATTERN);
+  if (!tokenMatch) return undefined;
+  return PERSON_ALIAS_MAP[normalizeToken(tokenMatch[1])];
 }
 
 function extractOwnerCandidates(eventRecord: Record<string, unknown>): TeamMember[] {
@@ -270,6 +279,16 @@ function getEventColor(event: ScheduleEvent) {
   if (event.calendarColor) return event.calendarColor;
   if (event.person) return PERSON_COLORS[event.person];
   return CATEGORY_COLORS[event.category];
+}
+
+function getEventBackground(event: ScheduleEvent) {
+  const baseColor = getEventColor(event);
+  if (event.context === 'ECC Teaching' && event.person) {
+    const personColor = PERSON_COLORS[event.person];
+    return `repeating-linear-gradient(135deg, ${withAlpha(baseColor, 0.9)} 0 8px, ${withAlpha(personColor, 0.9)} 8px 16px)`;
+  }
+
+  return baseColor;
 }
 
 function hoursBetween(start?: string, end?: string) {
@@ -394,7 +413,11 @@ export function convertTeamupEvents(teamupEvents: TeamupEvent[], subcalendarIdTo
     const matchedLegend = matchedByName ?? (matchedById ? toCalendarMeta(matchedById, rawColor) : undefined);
 
     const ownerCandidates = extractOwnerCandidates(eventRecord);
-    const fallbackPerson = inferOwnerFromText(
+    const titleOrNotesSuggestTeaching = TEACHING_CONTEXT_PATTERN.test(event.title) || TEACHING_CONTEXT_PATTERN.test(event.notes ?? '');
+    const isTeachingEvent = titleOrNotesSuggestTeaching || (typeof rawLabel === 'string' && normalizeToken(rawLabel).includes('ecc teaching'));
+    const fallbackPerson =
+      inferOwnerFromTeachingTitle(event.title, isTeachingEvent) ??
+      inferOwnerFromText(
       event.title,
       event.notes,
       rawLabel,
@@ -418,12 +441,12 @@ export function convertTeamupEvents(teamupEvents: TeamupEvent[], subcalendarIdTo
     const personCalendar = inferredOwner ? toCalendarMeta(inferredOwner) : undefined;
     const titleHintLabel = /resident chief/i.test(event.title) || /resident chief/i.test(event.notes ?? '')
       ? 'ECC Resident Chief'
-      : /teaching/i.test(event.title) || /teaching/i.test(event.notes ?? '')
+      : titleOrNotesSuggestTeaching
         ? 'ECC Teaching'
         : /service/i.test(event.title) || /service/i.test(event.notes ?? '')
           ? 'General ECC Service'
           : 'General Events';
-    const meta = matchedLegend ?? personCalendar ?? toCalendarMeta(normalizedRawLabel || titleHintLabel, rawColor);
+    const meta = matchedLegend ?? (isTeachingEvent ? toCalendarMeta('ECC Teaching', rawColor) : personCalendar ?? toCalendarMeta(normalizedRawLabel || titleHintLabel, rawColor));
     const context = meta.context ?? 'General Events';
 
     if (shouldDebugUnmatchedOwners && !inferredOwner) {
@@ -810,7 +833,7 @@ function App() {
           const dayEvents = dayMap[iso] ?? [];
           return <button key={iso} type="button" className={['day-cell', isSelected ? 'day-selected' : '', inMonth ? '' : 'day-outside-month'].join(' ').trim()} onClick={() => setSelectedDate(day)}>
             <span className="day-number">{day.getDate()}</span>
-            {dayEvents.length > 0 && <div className="day-event-stack">{dayEvents.slice(0, 5).map((item) => <span key={`${item.id}-${item.date}-${item.startTime ?? 'all-day'}`} className="day-event-pill" style={{ background: getEventColor(item) }}>{item.allDay ? item.title : `${formatDisplayTime(item.startTime).replace(' AM', 'a').replace(' PM', 'p')} ${item.title}`}</span>)}{dayEvents.length > 5 && <span className="day-event-more">+{dayEvents.length - 5} more</span>}</div>}
+            {dayEvents.length > 0 && <div className="day-event-stack">{dayEvents.slice(0, 5).map((item) => <span key={`${item.id}-${item.date}-${item.startTime ?? 'all-day'}`} className="day-event-pill" style={{ background: getEventBackground(item) }}>{item.allDay ? item.title : `${formatDisplayTime(item.startTime).replace(' AM', 'a').replace(' PM', 'p')} ${item.title}`}</span>)}{dayEvents.length > 5 && <span className="day-event-more">+{dayEvents.length - 5} more</span>}</div>}
           </button>;
         })}</section>
         </section>

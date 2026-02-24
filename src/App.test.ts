@@ -36,6 +36,23 @@ describe('convertTeamupEvents owner resolution', () => {
     );
   });
 
+  it('assigns ECC Teaching events by leading initials in title', () => {
+    const event: TeamupEvent = {
+      id: 'ecc-teaching-aa',
+      title: 'AA - ECC Teaching Labs',
+      notes: '',
+      all_day: false,
+      start_dt: '2026-02-03T09:00:00-05:00',
+      end_dt: '2026-02-03T11:00:00-05:00'
+    };
+
+    const result = convertTeamupEvents([event]);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].person).toBe('Ana Aghili');
+    expect(result[0].context).toBe('ECC Teaching');
+  });
+
   it('warns when owner is inferred only from subcalendar_id without owner/who fields', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const event: TeamupEvent = {
@@ -61,7 +78,6 @@ describe('convertTeamupEvents owner resolution', () => {
     );
   });
 });
-
 
 describe('getLateToEarlyShiftCounts', () => {
   it('counts turnarounds when shifts are marked as PM then AM on next day', () => {
