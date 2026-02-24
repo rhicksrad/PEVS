@@ -368,7 +368,7 @@ export function expandEventsForReporting(events: ScheduleEvent[]): ScheduleEvent
     });
 
     weekEvents.forEach((event) => {
-      if (event.context !== 'General Events') {
+      if (event.context !== 'General Events' || event.person) {
         expanded.push(event);
         return;
       }
@@ -474,13 +474,16 @@ export function convertTeamupEvents(teamupEvents: TeamupEvent[], subcalendarIdTo
       });
     }
 
-    const matchedById = Array.from(referencedCalendarIds)
+    const matchedByIdMetaCandidates = Array.from(referencedCalendarIds)
       .map((id) => subcalendarIdToLabel[id])
-      .find((label): label is string => Boolean(label));
+      .filter((label): label is string => Boolean(label))
+      .map((label) => toCalendarMeta(label, rawColor));
+    const matchedById = matchedByIdMetaCandidates.find((metaItem) => metaItem.person)?.label ?? matchedByIdMetaCandidates[0]?.label;
 
-    const matchedByName = Array.from(referencedCalendarNames)
+    const matchedByNameMetaCandidates = Array.from(referencedCalendarNames)
       .map((name) => toCalendarMeta(name, rawColor))
-      .find((metaItem) => KNOWN_CALENDARS[metaItem.label.toLowerCase()]);
+      .filter((metaItem) => KNOWN_CALENDARS[metaItem.label.toLowerCase()]);
+    const matchedByName = matchedByNameMetaCandidates.find((metaItem) => metaItem.person) ?? matchedByNameMetaCandidates[0];
 
     const matchedLegend = matchedByName ?? (matchedById ? toCalendarMeta(matchedById, rawColor) : undefined);
 
@@ -700,6 +703,8 @@ function App() {
   const insightDefaultEnd = formatIsoDate(monthGridDays[monthGridDays.length - 1]);
   const [insightRangeStart, setInsightRangeStart] = useState(insightDefaultStart);
   const [insightRangeEnd, setInsightRangeEnd] = useState(insightDefaultEnd);
+  const [appliedInsightRangeStart, setAppliedInsightRangeStart] = useState(insightDefaultStart);
+  const [appliedInsightRangeEnd, setAppliedInsightRangeEnd] = useState(insightDefaultEnd);
   const [safeInsightRangeStart, safeInsightRangeEnd] = useMemo(() => {
     if (!insightRangeStart) return [insightDefaultStart, insightDefaultEnd] as const;
     if (!insightRangeEnd) return [insightRangeStart, insightRangeStart] as const;
@@ -707,13 +712,20 @@ function App() {
       ? [insightRangeStart, insightRangeEnd] as const
       : [insightRangeEnd, insightRangeStart] as const;
   }, [insightDefaultEnd, insightDefaultStart, insightRangeEnd, insightRangeStart]);
+  const [safeAppliedInsightRangeStart, safeAppliedInsightRangeEnd] = useMemo(() => {
+    if (!appliedInsightRangeStart) return [insightDefaultStart, insightDefaultEnd] as const;
+    if (!appliedInsightRangeEnd) return [appliedInsightRangeStart, appliedInsightRangeStart] as const;
+    return appliedInsightRangeStart <= appliedInsightRangeEnd
+      ? [appliedInsightRangeStart, appliedInsightRangeEnd] as const
+      : [appliedInsightRangeEnd, appliedInsightRangeStart] as const;
+  }, [appliedInsightRangeEnd, appliedInsightRangeStart, insightDefaultEnd, insightDefaultStart]);
 
   useEffect(() => {
     let isCancelled = false;
     const monthStart = formatIsoDate(new Date(viewMonth.getFullYear(), viewMonth.getMonth(), 1));
     const monthEnd = formatIsoDate(new Date(viewMonth.getFullYear(), viewMonth.getMonth() + 1, 0));
-    const rangeStart = view === 'insights' ? safeInsightRangeStart : monthStart;
-    const rangeEnd = view === 'insights' ? safeInsightRangeEnd : monthEnd;
+    const rangeStart = view === 'insights' ? safeAppliedInsightRangeStart : monthStart;
+    const rangeEnd = view === 'insights' ? safeAppliedInsightRangeEnd : monthEnd;
 
     const loadEvents = async () => {
       setIsLoadingEvents(true);
@@ -750,7 +762,7 @@ function App() {
     return () => {
       isCancelled = true;
     };
-  }, [view, viewMonth, safeInsightRangeStart, safeInsightRangeEnd]);
+  }, [view, viewMonth, safeAppliedInsightRangeStart, safeAppliedInsightRangeEnd]);
 
   const calendarLegend = useMemo(() => LEGEND_CALENDARS.filter((item) => item.kind === 'other'), []);
   const filterableCalendarLabels = useMemo(() => new Set(calendarLegend.map((item) => item.label)), [calendarLegend]);
@@ -820,10 +832,16 @@ function App() {
   }, [monthFilteredEvents]);
 
   const insightEvents = useMemo(
-    () => filteredEvents.filter((event) => event.date >= safeInsightRangeStart && event.date <= safeInsightRangeEnd),
-    [filteredEvents, safeInsightRangeStart, safeInsightRangeEnd]
+    () => filteredEvents.filter((event) => event.date >= safeAppliedInsightRangeStart && event.date <= safeAppliedInsightRangeEnd),
+    [filteredEvents, safeAppliedInsightRangeStart, safeAppliedInsightRangeEnd]
   );
-  const insightDays = useMemo(() => getDateRange(safeInsightRangeStart, safeInsightRangeEnd), [safeInsightRangeStart, safeInsightRangeEnd]);
+  const insightDays = useMemo(
+    () => getDateRange(safeAppliedInsightRangeStart, safeAppliedInsightRangeEnd),
+    [safeAppliedInsightRangeStart, safeAppliedInsightRangeEnd]
+  );
+
+  const hasPendingInsightRange =
+    safeInsightRangeStart !== safeAppliedInsightRangeStart || safeInsightRangeEnd !== safeAppliedInsightRangeEnd;
 
   const insights = useMemo(() => {
     const weeksInRange = Math.max(1, new Set(insightDays.map(getWeekStartIso)).size);
@@ -838,7 +856,10 @@ function App() {
     const weekdayHours = WEEKDAY_LABELS.map((dayName, index) => ({ label: dayName, value: insightEvents.filter((event) => new Date(`${event.date}T00:00:00`).getDay() === (index + 1) % 7).reduce((sum, event) => sum + getEventHours(event), 0) }));
     const monthMap = new Map<string, number>();
     insightEvents.forEach((event) => monthMap.set(event.date.slice(0, 7), (monthMap.get(event.date.slice(0, 7)) ?? 0) + getEventHours(event)));
-    const monthRanking = Array.from(monthMap.entries()).map(([label, value]) => ({ label, value })).sort((a, b) => b.value - a.value).slice(0, 8);
+    const monthRanking = (Array.from(monthMap.entries()).map(([label, value]) => ({ label, value })).sort((a, b) => b.value - a.value).slice(0, 8));
+    if (monthRanking.length === 0) {
+      monthRanking.push({ label: safeAppliedInsightRangeStart.slice(0, 7), value: 0 });
+    }
     const lateToEarlyShiftCounts = getLateToEarlyShiftCounts(insightEvents);
     const workDayStreaks = TEAM.map((person) => {
       let maxStreak = 0; let current = 0;
@@ -850,7 +871,7 @@ function App() {
       insightDays.forEach((day) => { const hasWork = reportingEvents.some((event) => event.person === person && event.date === day); current = hasWork ? 0 : current + 1; maxStreak = Math.max(maxStreak, current); });
       return { label: person, value: maxStreak, color: PERSON_COLORS[person] };
     });
-    const startHourBuckets = Array.from({ length: 24 }, (_, hour) => ({ label: `${String(hour).padStart(2, '0')}:00`, value: insightEvents.filter((event) => event.startTime?.startsWith(String(hour).padStart(2, '0'))).length })).filter((bucket) => bucket.value > 0);
+    const startHourBuckets = Array.from({ length: 24 }, (_, hour) => ({ label: `${String(hour).padStart(2, '0')}:00`, value: insightEvents.filter((event) => event.startTime?.startsWith(String(hour).padStart(2, '0'))).length }));
     const overtimeCounts = TEAM.map((person) => {
       const personalDailyMap = new Map<string, number>();
       reportingEvents.filter((event) => event.person === person).forEach((event) => personalDailyMap.set(event.date, (personalDailyMap.get(event.date) ?? 0) + getEventHours(event)));
@@ -997,10 +1018,17 @@ function App() {
           <p className="insights-kicker">Pulse Dashboard</p>
           <h2>Team performance insights</h2>
           <p className="insights-subtitle">Track workload balance, streaks, and peak-demand patterns with live Teamup data.</p>
+          <p className="insights-subtitle">Showing {safeAppliedInsightRangeStart} to {safeAppliedInsightRangeEnd}{hasPendingInsightRange ? ` (pending ${safeInsightRangeStart} to ${safeInsightRangeEnd})` : ''}.</p>
         </div>
         <div className="insight-range">
           <label>Start<input type="date" value={insightRangeStart} onChange={(event) => setInsightRangeStart(event.target.value)} max={insightRangeEnd} /></label>
           <label>End<input type="date" value={insightRangeEnd} onChange={(event) => setInsightRangeEnd(event.target.value)} min={insightRangeStart} /></label>
+          <button type="button" onClick={() => {
+            setAppliedInsightRangeStart(safeInsightRangeStart);
+            setAppliedInsightRangeEnd(safeInsightRangeEnd);
+          }} disabled={!hasPendingInsightRange || isLoadingEvents}>
+            {isLoadingEvents ? 'Loading…' : hasPendingInsightRange ? 'Load insights' : 'Loaded'}
+          </button>
         </div>
       </div>
       <section className="stats-strip" aria-label="Quick summary">
