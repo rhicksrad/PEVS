@@ -658,13 +658,20 @@ function App() {
   const insightDefaultEnd = formatIsoDate(monthGridDays[monthGridDays.length - 1]);
   const [insightRangeStart, setInsightRangeStart] = useState(insightDefaultStart);
   const [insightRangeEnd, setInsightRangeEnd] = useState(insightDefaultEnd);
+  const [safeInsightRangeStart, safeInsightRangeEnd] = useMemo(() => {
+    if (!insightRangeStart) return [insightDefaultStart, insightDefaultEnd] as const;
+    if (!insightRangeEnd) return [insightRangeStart, insightRangeStart] as const;
+    return insightRangeStart <= insightRangeEnd
+      ? [insightRangeStart, insightRangeEnd] as const
+      : [insightRangeEnd, insightRangeStart] as const;
+  }, [insightDefaultEnd, insightDefaultStart, insightRangeEnd, insightRangeStart]);
 
   useEffect(() => {
     let isCancelled = false;
     const monthStart = formatIsoDate(new Date(viewMonth.getFullYear(), viewMonth.getMonth(), 1));
     const monthEnd = formatIsoDate(new Date(viewMonth.getFullYear(), viewMonth.getMonth() + 1, 0));
-    const rangeStart = view === 'insights' ? insightRangeStart : monthStart;
-    const rangeEnd = view === 'insights' ? insightRangeEnd : monthEnd;
+    const rangeStart = view === 'insights' ? safeInsightRangeStart : monthStart;
+    const rangeEnd = view === 'insights' ? safeInsightRangeEnd : monthEnd;
 
     const loadEvents = async () => {
       setIsLoadingEvents(true);
@@ -701,7 +708,7 @@ function App() {
     return () => {
       isCancelled = true;
     };
-  }, [view, viewMonth, insightRangeStart, insightRangeEnd]);
+  }, [view, viewMonth, safeInsightRangeStart, safeInsightRangeEnd]);
 
   const calendarLegend = useMemo(() => LEGEND_CALENDARS.filter((item) => item.kind === 'other'), []);
   const filterableCalendarLabels = useMemo(() => new Set(calendarLegend.map((item) => item.label)), [calendarLegend]);
@@ -780,15 +787,22 @@ function App() {
     return date && typeof hours === 'number' ? { date, hours } : undefined;
   }, [monthFilteredEvents]);
 
-  const insightEvents = useMemo(() => filteredEvents.filter((event) => event.date >= insightRangeStart && event.date <= insightRangeEnd), [filteredEvents, insightRangeStart, insightRangeEnd]);
-  const insightDays = useMemo(() => getDateRange(insightRangeStart, insightRangeEnd), [insightRangeStart, insightRangeEnd]);
+  const insightEvents = useMemo(
+    () => filteredEvents.filter((event) => event.date >= safeInsightRangeStart && event.date <= safeInsightRangeEnd),
+    [filteredEvents, safeInsightRangeStart, safeInsightRangeEnd]
+  );
+  const insightDays = useMemo(() => getDateRange(safeInsightRangeStart, safeInsightRangeEnd), [safeInsightRangeStart, safeInsightRangeEnd]);
 
   const insights = useMemo(() => {
-    const weeksInRange = Math.max(1, insightDays.length / 7);
+    const weeksInRange = Math.max(1, new Set(insightDays.map(getWeekStartIso)).size);
     const reportingEvents = expandEventsForReporting(insightEvents);
     const hoursByPerson = TEAM.map((person) => ({ label: person, value: reportingEvents.filter((event) => event.person === person).reduce((sum, event) => sum + getEventHours(event), 0), color: PERSON_COLORS[person] }));
     const averageHoursPerWeekByPerson = hoursByPerson.map((personHours) => ({ ...personHours, value: Number((personHours.value / weeksInRange).toFixed(2)) }));
-    const hoursByDay = insightDays.map((day) => ({ label: day.slice(5), value: insightEvents.filter((event) => event.date === day).reduce((sum, event) => sum + getEventHours(event), 0) }));
+    const hoursByDayMap = insightEvents.reduce<Record<string, number>>((acc, event) => {
+      acc[event.date] = (acc[event.date] ?? 0) + getEventHours(event);
+      return acc;
+    }, {});
+    const hoursByDay = insightDays.map((day) => ({ label: day.slice(5), value: hoursByDayMap[day] ?? 0 }));
     const weekdayHours = WEEKDAY_LABELS.map((dayName, index) => ({ label: dayName, value: insightEvents.filter((event) => new Date(`${event.date}T00:00:00`).getDay() === (index + 1) % 7).reduce((sum, event) => sum + getEventHours(event), 0) }));
     const monthMap = new Map<string, number>();
     insightEvents.forEach((event) => monthMap.set(event.date.slice(0, 7), (monthMap.get(event.date.slice(0, 7)) ?? 0) + getEventHours(event)));
@@ -817,6 +831,23 @@ function App() {
     ];
     return { hoursByPerson, averageHoursPerWeekByPerson, hoursByDay, weekdayHours, monthRanking, lateToEarlyShiftCounts, workDayStreaks, dayOffStreaks, startHourBuckets, overtimeCounts, weekdayWeekend };
   }, [insightEvents, insightDays]);
+
+  const insightTotalHours = useMemo(
+    () => insightEvents.reduce((sum, event) => sum + getEventHours(event), 0),
+    [insightEvents]
+  );
+  const insightBusiestDay = useMemo(() => {
+    const totals = insightEvents.reduce<Record<string, number>>((acc, event) => {
+      acc[event.date] = (acc[event.date] ?? 0) + getEventHours(event);
+      return acc;
+    }, {});
+    const [date, hours] = Object.entries(totals).sort((a, b) => b[1] - a[1])[0] ?? [];
+    return date && typeof hours === 'number' ? { date, hours } : undefined;
+  }, [insightEvents]);
+
+  const visibleEventCount = view === 'insights' ? insightEvents.length : monthFilteredEvents.length;
+  const visibleHours = view === 'insights' ? insightTotalHours : totalVisibleHours;
+  const visibleBusiestDay = view === 'insights' ? insightBusiestDay : busiestDay;
 
   const togglePerson = (person: TeamMember) => setSelectedPeople((current) => (current.includes(person) ? current.filter((item) => item !== person) : [...current, person]));
   const toggleCalendar = (label: string) => setSelectedCalendars((current) => (current.includes(label) ? current.filter((item) => item !== label) : [...current, label]));
@@ -933,10 +964,10 @@ function App() {
         </div>
       </div>
       <section className="stats-strip" aria-label="Quick summary">
-        <article className="stat-card"><span>Total visible events</span><strong>{monthFilteredEvents.length}</strong></article>
-        <article className="stat-card"><span>Scheduled hours</span><strong>{totalVisibleHours.toFixed(1)}h</strong></article>
+        <article className="stat-card"><span>Total visible events</span><strong>{visibleEventCount}</strong></article>
+        <article className="stat-card"><span>Scheduled hours</span><strong>{visibleHours.toFixed(1)}h</strong></article>
         <article className="stat-card"><span>Team members selected</span><strong>{selectedPeople.length}/{TEAM.length}</strong></article>
-        <article className="stat-card"><span>Busiest day</span><strong>{busiestDay ? `${busiestDay.date} • ${busiestDay.hours.toFixed(1)}h` : 'No events'}</strong></article>
+        <article className="stat-card"><span>Busiest day</span><strong>{visibleBusiestDay ? `${visibleBusiestDay.date} • ${visibleBusiestDay.hours.toFixed(1)}h` : 'No events'}</strong></article>
       </section>
       <div className="insight-grid">
         <article className="insight-card insight-card-feature"><h3>Hours Over Time</h3><LineChart data={insights.hoursByDay} /></article>
