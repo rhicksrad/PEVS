@@ -52,7 +52,8 @@ type CalendarMeta = {
 
 const STORAGE_KEY = 'pevs-schedule-events-v5';
 const CURRENT_SCHEMA_VERSION = 6;
-const DEFAULT_MONTH = new Date(2026, 1, 1);
+const TODAY = new Date();
+const DEFAULT_MONTH = new Date(TODAY.getFullYear(), TODAY.getMonth(), 1);
 const TEAM: TeamMember[] = ['Aimee Brooks', 'Ana Aghili', 'Liz Thomovsky', 'Paula Johnson'];
 const PERSON_MARKER_PATTERN = /\(([^)]+)\)/;
 const ALPHA_NUMERIC_PATTERN = /[^a-z0-9]+/g;
@@ -682,7 +683,7 @@ function App() {
   const [subcalendarLabels, setSubcalendarLabels] = useState<Record<number, string>>({});
   const [loadError, setLoadError] = useState<string>('');
   const [viewMonth, setViewMonth] = useState(DEFAULT_MONTH);
-  const [selectedDate, setSelectedDate] = useState<Date>(DEFAULT_MONTH);
+  const [selectedDate, setSelectedDate] = useState<Date>(TODAY);
   const [selectedPeople, setSelectedPeople] = useState<TeamMember[]>([...TEAM]);
   const [selectedContexts, setSelectedContexts] = useState<string[]>([...EVENT_CONTEXTS]);
   const [hasCustomizedContextFilter, setHasCustomizedContextFilter] = useState(false);
