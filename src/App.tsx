@@ -320,6 +320,45 @@ function getEventHours(event: ScheduleEvent) {
   return event.startTime ? 1 : 0;
 }
 
+function getWeekStartIso(date: string): string {
+  const parsed = new Date(`${date}T00:00:00`);
+  const offset = (parsed.getDay() + 6) % 7;
+  parsed.setDate(parsed.getDate() - offset);
+  return formatIsoDate(parsed);
+}
+
+export function expandEventsForReporting(events: ScheduleEvent[]): ScheduleEvent[] {
+  const groupedByWeek = events.reduce<Record<string, ScheduleEvent[]>>((acc, event) => {
+    const weekStart = getWeekStartIso(event.date);
+    acc[weekStart] = [...(acc[weekStart] ?? []), event];
+    return acc;
+  }, {});
+
+  const expanded: ScheduleEvent[] = [];
+  Object.values(groupedByWeek).forEach((weekEvents) => {
+    const activePeople = new Set<TeamMember>();
+    weekEvents.forEach((event) => {
+      if (event.context !== 'General Events' && event.person) {
+        activePeople.add(event.person);
+      }
+    });
+
+    weekEvents.forEach((event) => {
+      if (event.context !== 'General Events') {
+        expanded.push(event);
+        return;
+      }
+
+      TEAM.forEach((person) => {
+        if (!activePeople.has(person)) return;
+        expanded.push({ ...event, id: `${event.id}::${person}`, person });
+      });
+    });
+  });
+
+  return expanded;
+}
+
 function toLocalDateKey(value: string) {
   return parseDateTimeParts(value)?.date ?? null;
 }
@@ -741,7 +780,8 @@ function App() {
 
   const insights = useMemo(() => {
     const weeksInRange = Math.max(1, insightDays.length / 7);
-    const hoursByPerson = TEAM.map((person) => ({ label: person, value: insightEvents.filter((event) => event.person === person).reduce((sum, event) => sum + getEventHours(event), 0), color: PERSON_COLORS[person] }));
+    const reportingEvents = expandEventsForReporting(insightEvents);
+    const hoursByPerson = TEAM.map((person) => ({ label: person, value: reportingEvents.filter((event) => event.person === person).reduce((sum, event) => sum + getEventHours(event), 0), color: PERSON_COLORS[person] }));
     const averageHoursPerWeekByPerson = hoursByPerson.map((personHours) => ({ ...personHours, value: Number((personHours.value / weeksInRange).toFixed(2)) }));
     const hoursByDay = insightDays.map((day) => ({ label: day.slice(5), value: insightEvents.filter((event) => event.date === day).reduce((sum, event) => sum + getEventHours(event), 0) }));
     const weekdayHours = WEEKDAY_LABELS.map((dayName, index) => ({ label: dayName, value: insightEvents.filter((event) => new Date(`${event.date}T00:00:00`).getDay() === (index + 1) % 7).reduce((sum, event) => sum + getEventHours(event), 0) }));
@@ -751,18 +791,18 @@ function App() {
     const lateToEarlyShiftCounts = getLateToEarlyShiftCounts(insightEvents);
     const workDayStreaks = TEAM.map((person) => {
       let maxStreak = 0; let current = 0;
-      insightDays.forEach((day) => { const hasWork = insightEvents.some((event) => event.person === person && event.date === day); current = hasWork ? current + 1 : 0; maxStreak = Math.max(maxStreak, current); });
+      insightDays.forEach((day) => { const hasWork = reportingEvents.some((event) => event.person === person && event.date === day); current = hasWork ? current + 1 : 0; maxStreak = Math.max(maxStreak, current); });
       return { label: person, value: maxStreak, color: PERSON_COLORS[person] };
     });
     const dayOffStreaks = TEAM.map((person) => {
       let maxStreak = 0; let current = 0;
-      insightDays.forEach((day) => { const hasWork = insightEvents.some((event) => event.person === person && event.date === day); current = hasWork ? 0 : current + 1; maxStreak = Math.max(maxStreak, current); });
+      insightDays.forEach((day) => { const hasWork = reportingEvents.some((event) => event.person === person && event.date === day); current = hasWork ? 0 : current + 1; maxStreak = Math.max(maxStreak, current); });
       return { label: person, value: maxStreak, color: PERSON_COLORS[person] };
     });
     const startHourBuckets = Array.from({ length: 24 }, (_, hour) => ({ label: `${String(hour).padStart(2, '0')}:00`, value: insightEvents.filter((event) => event.startTime?.startsWith(String(hour).padStart(2, '0'))).length })).filter((bucket) => bucket.value > 0);
     const overtimeCounts = TEAM.map((person) => {
       const personalDailyMap = new Map<string, number>();
-      insightEvents.filter((event) => event.person === person).forEach((event) => personalDailyMap.set(event.date, (personalDailyMap.get(event.date) ?? 0) + getEventHours(event)));
+      reportingEvents.filter((event) => event.person === person).forEach((event) => personalDailyMap.set(event.date, (personalDailyMap.get(event.date) ?? 0) + getEventHours(event)));
       const count = Array.from(personalDailyMap.values()).filter((hours) => hours > 8).length;
       return { label: person, value: count, color: PERSON_COLORS[person] };
     });
