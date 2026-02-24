@@ -101,5 +101,12 @@ export async function fetchSubcalendarLabels(): Promise<Record<number, string>> 
     return acc;
   }, {});
 
-  return Object.keys(mapped).length > 0 ? mapped : FALLBACK_SUBCALENDAR_LABELS;
+  if (Object.keys(mapped).length === 0) {
+    return FALLBACK_SUBCALENDAR_LABELS;
+  }
+
+  return {
+    ...FALLBACK_SUBCALENDAR_LABELS,
+    ...mapped
+  };
 }

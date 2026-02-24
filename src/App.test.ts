@@ -103,6 +103,26 @@ describe('convertTeamupEvents owner resolution', () => {
       })
     );
   });
+
+  it('prefers person calendar when multiple subcalendar ids include both context and owner calendars', () => {
+    const event: TeamupEvent = {
+      id: 'mixed-subcalendar-ids',
+      title: 'ED Coverage',
+      notes: '',
+      all_day: false,
+      start_dt: '2026-03-10T08:00:00-05:00',
+      end_dt: '2026-03-10T16:00:00-05:00',
+      subcalendar_ids: [111111, 432049]
+    };
+
+    const result = convertTeamupEvents([event], {
+      111111: 'General ECC Service',
+      432049: 'Paula Johnson'
+    });
+
+    expect(result).toHaveLength(1);
+    expect(result[0].person).toBe('Paula Johnson');
+  });
 });
 
 
@@ -162,6 +182,25 @@ describe('expandEventsForReporting', () => {
       .map((event) => event.person);
 
     expect(assignedPeople).toEqual(['Ana Aghili']);
+  });
+
+
+  it('keeps General Events that already have a resolved owner', () => {
+    const expanded = expandEventsForReporting([
+      {
+        id: 'owned-general',
+        source: 'teamup',
+        date: '2026-03-03',
+        title: 'Day Shift',
+        person: 'Paula Johnson',
+        category: 'shift',
+        context: 'General Events'
+      }
+    ]);
+
+    expect(expanded).toHaveLength(1);
+    expect(expanded[0].id).toBe('owned-general');
+    expect(expanded[0].person).toBe('Paula Johnson');
   });
 });
 describe('getLateToEarlyShiftCounts', () => {
