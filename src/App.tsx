@@ -765,7 +765,7 @@ function App() {
     };
   }, [view, viewMonth, safeAppliedInsightRangeStart, safeAppliedInsightRangeEnd]);
 
-  const calendarLegend = useMemo(() => LEGEND_CALENDARS.filter((item) => item.kind === 'other'), []);
+  const calendarLegend = useMemo(() => LEGEND_CALENDARS, []);
   const filterableCalendarLabels = useMemo(() => new Set(calendarLegend.map((item) => item.label)), [calendarLegend]);
 
   const availableContexts = useMemo(() => {
@@ -992,9 +992,10 @@ function App() {
           </button>;
         })}</section>
         </section>
-        <aside className="day-sidebar">
-          <h2>{formatIsoDate(selectedDate)}</h2>
-          {selectedDateApiEvents.length === 0 ? <p className="chart-empty">No events from API for this day.</p> : <div className="day-events">{selectedDateApiEvents.map((item) => {
+        <div className="calendar-sidebar">
+          <aside className="day-sidebar">
+            <h2>{formatIsoDate(selectedDate)}</h2>
+            {selectedDateApiEvents.length === 0 ? <p className="chart-empty">No events from API for this day.</p> : <div className="day-events">{selectedDateApiEvents.map((item) => {
             const apiStartTime = toLocalTime(item.start_dt);
             const apiEndTime = toLocalTime(item.end_dt);
             const apiEventTime = item.all_day ? 'All day' : `${formatDisplayTime(apiStartTime)} - ${formatDisplayTime(apiEndTime)}`;
@@ -1010,8 +1011,14 @@ function App() {
             const eventColor = getApiEventColor(item, subcalendarLabels);
             const eventTextColor = getHexTextColor(eventColor);
             return <div key={`${item.id}-${item.start_dt}-sidebar`} className="event-chip" style={{ borderLeftColor: eventColor, background: withAlpha(eventColor, 0.22), color: eventTextColor }}><strong>{apiEventTime}</strong> {item.title}<br /><small>ID {item.id}{subcalendarText}</small>{durationHours !== undefined && <><br /><small>Duration {durationHours.toFixed(2)}h</small></>}{locationText && <><br /><small>Location {locationText}</small></>}{timezoneText && <><br /><small>TZ {timezoneText}</small></>}{recurrenceText && <><br /><small>Rule {recurrenceText}</small></>}{notesText && <><br /><small>Notes {notesText}</small></>}</div>;
-          })}</div>}
-        </aside>
+            })}</div>}
+          </aside>
+
+          {calendarLegend.length > 0 && <aside className="calendar-legend" aria-label="Calendar legend">
+            <h3>Legend</h3>
+            <div className="calendar-legend-list">{calendarLegend.map((calendar) => <div key={`${calendar.label}-legend`} className="calendar-legend-item"><span className="filter-swatch" style={{ background: calendar.color }} />{calendar.label}</div>)}</div>
+          </aside>}
+        </div>
       </section>
     </> : <section className="insights-shell">
       <div className="insights-hero">

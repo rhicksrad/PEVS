@@ -224,6 +224,12 @@ body {
   min-height: 0;
 }
 
+.calendar-sidebar {
+  display: grid;
+  align-content: start;
+  gap: 0.7rem;
+}
+
 .calendar-main {
   display: grid;
   grid-template-rows: auto 1fr;
@@ -308,13 +314,40 @@ body {
   background: rgba(11, 19, 34, 0.9);
   border: 1px solid rgba(100, 116, 139, 0.42);
   border-radius: 12px;
-  padding: 0.78rem;
+  padding: 0.66rem;
   display: grid;
   align-content: start;
   gap: 0.6rem;
 }
 
 .day-sidebar h2 { margin: 0; font-size: 1rem; }
+
+.calendar-legend {
+  background: rgba(11, 19, 34, 0.9);
+  border: 1px solid rgba(100, 116, 139, 0.42);
+  border-radius: 12px;
+  padding: 0.66rem;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.calendar-legend h3 {
+  margin: 0;
+  font-size: 0.92rem;
+}
+
+.calendar-legend-list {
+  display: grid;
+  gap: 0.32rem;
+}
+
+.calendar-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.82rem;
+  color: #d7e4f6;
+}
 
 .insights-shell {
   display: grid;
@@ -516,7 +549,7 @@ input[type='date'] { color-scheme: dark; }
     max-height: 188px;
   }
 
-  .day-sidebar { order: -1; }
+  .calendar-sidebar { order: -1; }
   .insight-grid { grid-template-columns: 1fr; }
   .insight-card-feature { grid-column: auto; }
 }
