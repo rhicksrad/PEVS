@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { convertTeamupEvents, getLateToEarlyShiftCounts } from './App';
+import { convertTeamupEvents, expandEventsForReporting, getLateToEarlyShiftCounts } from './App';
 import type { TeamupEvent } from './lib/teamupApi';
 
 describe('convertTeamupEvents owner resolution', () => {
@@ -79,6 +79,65 @@ describe('convertTeamupEvents owner resolution', () => {
   });
 });
 
+
+
+describe('expandEventsForReporting', () => {
+  it('assigns General Events to everyone with non-General-Events work in the same week', () => {
+    const expanded = expandEventsForReporting([
+      {
+        id: 'shift-1',
+        source: 'teamup',
+        date: '2026-02-02',
+        title: 'ED Shift',
+        person: 'Paula Johnson',
+        category: 'shift',
+        context: 'General ECC Service'
+      },
+      {
+        id: 'gen-1',
+        source: 'teamup',
+        date: '2026-02-03',
+        title: 'Department Meeting',
+        category: 'admin',
+        context: 'General Events'
+      }
+    ]);
+
+    const assignedPeople = expanded
+      .filter((event) => event.id.startsWith('gen-1::'))
+      .map((event) => event.person);
+
+    expect(assignedPeople).toEqual(['Paula Johnson']);
+  });
+
+  it('does not assign General Events to team members on vacation that week', () => {
+    const expanded = expandEventsForReporting([
+      {
+        id: 'teaching-1',
+        source: 'teamup',
+        date: '2026-02-10',
+        title: 'AA - ECC Teaching Labs',
+        person: 'Ana Aghili',
+        category: 'teaching',
+        context: 'ECC Teaching'
+      },
+      {
+        id: 'gen-2',
+        source: 'teamup',
+        date: '2026-02-11',
+        title: 'All-hands',
+        category: 'admin',
+        context: 'General Events'
+      }
+    ]);
+
+    const assignedPeople = expanded
+      .filter((event) => event.id.startsWith('gen-2::'))
+      .map((event) => event.person);
+
+    expect(assignedPeople).toEqual(['Ana Aghili']);
+  });
+});
 describe('getLateToEarlyShiftCounts', () => {
   it('counts turnarounds when shifts are marked as PM then AM on next day', () => {
     const counts = getLateToEarlyShiftCounts([
