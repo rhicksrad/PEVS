@@ -118,6 +118,7 @@ const EARLY_SHIFT_PATTERN = /\b(early|morning)\b/i;
 const PM_SHIFT_PATTERN = /\bpm\b/i;
 const AM_SHIFT_PATTERN = /\bam\b/i;
 const TEACHING_CONTEXT_PATTERN = /\bteaching\b/i;
+const GRADE_ASSIGNMENT_PATTERN = /^\s*grade assignment\s*[12]\b/i;
 const LEADING_OWNER_TOKEN_PATTERN = /^\s*([a-z]{2,})\s*(?:[-:|]|\b)/i;
 
 const withAlpha = (hex: string, alpha: number) => {
@@ -461,9 +462,11 @@ export function convertTeamupEvents(teamupEvents: TeamupEvent[], subcalendarIdTo
     const matchedLegend = matchedByName ?? (matchedById ? toCalendarMeta(matchedById, rawColor) : undefined);
 
     const ownerCandidates = extractOwnerCandidates(eventRecord);
+    const isGradeAssignment = GRADE_ASSIGNMENT_PATTERN.test(event.title);
     const titleOrNotesSuggestTeaching = TEACHING_CONTEXT_PATTERN.test(event.title) || TEACHING_CONTEXT_PATTERN.test(event.notes ?? '');
-    const isTeachingEvent = titleOrNotesSuggestTeaching || (typeof rawLabel === 'string' && normalizeToken(rawLabel).includes('ecc teaching'));
+    const isTeachingEvent = isGradeAssignment || titleOrNotesSuggestTeaching || (typeof rawLabel === 'string' && normalizeToken(rawLabel).includes('ecc teaching'));
     const fallbackPerson =
+      (isGradeAssignment ? 'Ana Aghili' : undefined) ??
       inferOwnerFromTeachingTitle(event.title, isTeachingEvent) ??
       inferOwnerFromText(
       event.title,

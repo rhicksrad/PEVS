@@ -53,6 +53,32 @@ describe('convertTeamupEvents owner resolution', () => {
     expect(result[0].context).toBe('ECC Teaching');
   });
 
+
+  it('assigns Grade Assignment 1 and 2 items to Ana Aghili and treats them as ECC Teaching', () => {
+    const result = convertTeamupEvents([
+      {
+        id: 'grade-assignment-1',
+        title: 'Grade Assignment 1',
+        notes: '',
+        all_day: false,
+        start_dt: '2026-02-04T09:00:00-05:00',
+        end_dt: '2026-02-04T10:00:00-05:00'
+      },
+      {
+        id: 'grade-assignment-2',
+        title: 'Grade Assignment 2?',
+        notes: '',
+        all_day: false,
+        start_dt: '2026-02-05T09:00:00-05:00',
+        end_dt: '2026-02-05T10:00:00-05:00'
+      }
+    ]);
+
+    expect(result).toHaveLength(2);
+    expect(result.map((event) => event.person)).toEqual(['Ana Aghili', 'Ana Aghili']);
+    expect(result.map((event) => event.context)).toEqual(['ECC Teaching', 'ECC Teaching']);
+  });
+
   it('warns when owner is inferred only from subcalendar_id without owner/who fields', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const event: TeamupEvent = {
