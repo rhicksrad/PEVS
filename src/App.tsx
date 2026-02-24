@@ -918,7 +918,32 @@ function App() {
         <div className="calendar-actions">
           <button type="button" className={view === 'calendar' ? 'tab-active' : ''} onClick={() => setView('calendar')}>Calendar</button>
           <button type="button" className={view === 'insights' ? 'tab-active' : ''} onClick={() => setView('insights')}>Insights</button>
-          <button type="button" className={isFiltersOpen ? 'tab-active' : ''} onClick={() => setIsFiltersOpen((current) => !current)}>Filters</button>
+          <div className="filters-menu">
+            <button type="button" className={isFiltersOpen ? 'tab-active' : ''} onClick={() => setIsFiltersOpen((current) => !current)}>Filters</button>
+            {isFiltersOpen && <><button type="button" className="filters-backdrop" aria-label="Close filters" onClick={() => setIsFiltersOpen(false)} /><div className="filters-overlay" role="dialog" aria-label="Filters">
+              <div className="filters-overlay-header">
+                <strong>Filters</strong>
+                <button type="button" onClick={resetFilters}>Reset filters</button>
+              </div>
+
+              {calendarLegend.length > 0 && <fieldset className="filters-group"><legend>Calendars</legend><div className="filters-options">{calendarLegend.map((calendar) => {
+                const active = selectedCalendars.includes(calendar.label);
+                return <label key={calendar.label} className="filter-checkbox"><input type="checkbox" checked={active} onChange={() => toggleCalendar(calendar.label)} /><span className="filter-swatch" style={{ background: calendar.color }} />{calendar.label}</label>;
+              })}</div></fieldset>}
+
+              <fieldset className="filters-group"><legend>Team</legend><div className="filters-options">{TEAM.map((person) => {
+                const active = selectedPeople.includes(person);
+                const color = FILTER_COLORS[person] ?? PERSON_COLORS[person];
+                return <label key={person} className="filter-checkbox"><input type="checkbox" checked={active} onChange={() => togglePerson(person)} /><span className="filter-swatch" style={{ background: color }} />{person}</label>;
+              })}</div></fieldset>
+
+              <fieldset className="filters-group"><legend>Shifts</legend><div className="filters-options">{availableContexts.map((context) => {
+                const active = selectedContexts.includes(context);
+                const color = FILTER_COLORS[context] ?? '#64748b';
+                return <label key={context} className="filter-checkbox"><input type="checkbox" checked={active} onChange={() => toggleContext(context)} /><span className="filter-swatch" style={{ background: color }} />{context}</label>;
+              })}</div></fieldset>
+            </div></>}
+          </div>
           <button type="button" onClick={downloadDisplayedScreen} disabled={isExportingPdf}>{isExportingPdf ? 'Building PDF…' : 'Download PDF'}</button>
         </div>
       </header>
@@ -927,29 +952,6 @@ function App() {
         {validationIssues.length > 0 && <div className="warning-banner" role="status"><strong>Schedule warnings:</strong> {validationIssues.length} issue(s) detected. Resolve owner mapping for Teamup events when applicable.{validationIssues.length > 0 && <ul>{validationIssues.slice(0, 3).map((issue) => <li key={issue}>{issue}</li>)}{validationIssues.length > 3 && <li>+{validationIssues.length - 3} more issue(s) in console.</li>}</ul>}</div>}
         {loadError && <div className="warning-banner" role="status"><strong>Unable to load events:</strong> {loadError}</div>}
 
-        {isFiltersOpen && <><button type="button" className="filters-backdrop" aria-label="Close filters" onClick={() => setIsFiltersOpen(false)} /><div className="filters-overlay" role="dialog" aria-label="Filters">
-          <div className="filters-overlay-header">
-            <strong>Filters</strong>
-            <button type="button" onClick={resetFilters}>Reset filters</button>
-          </div>
-
-          {calendarLegend.length > 0 && <fieldset className="filters-group"><legend>Calendars</legend><div className="filters-options">{calendarLegend.map((calendar) => {
-            const active = selectedCalendars.includes(calendar.label);
-            return <label key={calendar.label} className="filter-checkbox"><input type="checkbox" checked={active} onChange={() => toggleCalendar(calendar.label)} /><span className="filter-swatch" style={{ background: calendar.color }} />{calendar.label}</label>;
-          })}</div></fieldset>}
-
-          <fieldset className="filters-group"><legend>Team</legend><div className="filters-options">{TEAM.map((person) => {
-            const active = selectedPeople.includes(person);
-            const color = FILTER_COLORS[person] ?? PERSON_COLORS[person];
-            return <label key={person} className="filter-checkbox"><input type="checkbox" checked={active} onChange={() => togglePerson(person)} /><span className="filter-swatch" style={{ background: color }} />{person}</label>;
-          })}</div></fieldset>
-
-          <fieldset className="filters-group"><legend>Shifts</legend><div className="filters-options">{availableContexts.map((context) => {
-            const active = selectedContexts.includes(context);
-            const color = FILTER_COLORS[context] ?? '#64748b';
-            return <label key={context} className="filter-checkbox"><input type="checkbox" checked={active} onChange={() => toggleContext(context)} /><span className="filter-swatch" style={{ background: color }} />{context}</label>;
-          })}</div></fieldset>
-        </div></>}
       </section>
     </section>
 
