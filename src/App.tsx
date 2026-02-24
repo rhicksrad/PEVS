@@ -291,6 +291,15 @@ function getEventBackground(event: ScheduleEvent) {
   return baseColor;
 }
 
+function getEventTextColor(event: ScheduleEvent) {
+  const color = getEventColor(event).replace('#', '');
+  const r = Number.parseInt(color.slice(0, 2), 16);
+  const g = Number.parseInt(color.slice(2, 4), 16);
+  const b = Number.parseInt(color.slice(4, 6), 16);
+  const luminance = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+  return luminance > 0.62 ? '#0f172a' : '#f8fafc';
+}
+
 function hoursBetween(start?: string, end?: string) {
   if (!start || !end) return 0;
   const [startH, startM] = start.split(':').map(Number);
@@ -833,7 +842,7 @@ function App() {
           const dayEvents = dayMap[iso] ?? [];
           return <button key={iso} type="button" className={['day-cell', isSelected ? 'day-selected' : '', inMonth ? '' : 'day-outside-month'].join(' ').trim()} onClick={() => setSelectedDate(day)}>
             <span className="day-number">{day.getDate()}</span>
-            {dayEvents.length > 0 && <div className="day-event-stack">{dayEvents.slice(0, 5).map((item) => <span key={`${item.id}-${item.date}-${item.startTime ?? 'all-day'}`} className="day-event-pill" style={{ background: getEventBackground(item) }}>{item.allDay ? item.title : `${formatDisplayTime(item.startTime).replace(' AM', 'a').replace(' PM', 'p')} ${item.title}`}</span>)}{dayEvents.length > 5 && <span className="day-event-more">+{dayEvents.length - 5} more</span>}</div>}
+            {dayEvents.length > 0 && <div className="day-event-stack">{dayEvents.slice(0, 5).map((item) => <span key={`${item.id}-${item.date}-${item.startTime ?? 'all-day'}`} className="day-event-pill" style={{ background: getEventBackground(item), color: getEventTextColor(item), textShadow: '0 1px 1px rgba(2, 6, 23, 0.55), 0 0 0.5px rgba(2, 6, 23, 0.95)' }}>{item.allDay ? item.title : `${formatDisplayTime(item.startTime).replace(' AM', 'a').replace(' PM', 'p')} ${item.title}`}</span>)}{dayEvents.length > 5 && <span className="day-event-more">+{dayEvents.length - 5} more</span>}</div>}
           </button>;
         })}</section>
         </section>
