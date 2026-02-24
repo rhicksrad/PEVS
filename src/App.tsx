@@ -293,12 +293,35 @@ function getEventBackground(event: ScheduleEvent) {
 }
 
 function getEventTextColor(event: ScheduleEvent) {
-  const color = getEventColor(event).replace('#', '');
+  return getHexTextColor(getEventColor(event));
+}
+
+function getHexTextColor(colorHex: string) {
+  const color = colorHex.replace('#', '');
   const r = Number.parseInt(color.slice(0, 2), 16);
   const g = Number.parseInt(color.slice(2, 4), 16);
   const b = Number.parseInt(color.slice(4, 6), 16);
   const luminance = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
   return luminance > 0.62 ? '#0f172a' : '#f8fafc';
+}
+
+function getApiEventColor(event: TeamupEvent, subcalendarLabelMap: Record<number, string>) {
+  const eventRecord = event as Record<string, unknown>;
+  const nestedSubcalendar = eventRecord.subcalendar as Record<string, unknown> | undefined;
+  const explicitColor =
+    normalizeHexColor(nestedSubcalendar?.color) ??
+    normalizeHexColor(eventRecord.subcalendar_color) ??
+    normalizeHexColor(eventRecord.calendar_color);
+  if (explicitColor) return explicitColor;
+
+  const subcalendarName =
+    (typeof event.subcalendar_name === 'string' && event.subcalendar_name.trim()) ||
+    (typeof event.calendar_name === 'string' && event.calendar_name.trim()) ||
+    (typeof nestedSubcalendar?.name === 'string' && nestedSubcalendar.name.trim()) ||
+    (typeof nestedSubcalendar?.title === 'string' && nestedSubcalendar.title.trim()) ||
+    (event.subcalendar_id ? subcalendarLabelMap[event.subcalendar_id] : undefined);
+
+  return subcalendarName ? toCalendarMeta(subcalendarName).color : DEFAULT_CALENDAR_COLOR;
 }
 
 function hoursBetween(start?: string, end?: string) {
@@ -947,7 +970,9 @@ function App() {
             const recurrenceText = typeof item.rrule === 'string' && item.rrule.trim() ? item.rrule.trim() : undefined;
             const timezoneText = typeof item.tz === 'string' && item.tz.trim() ? item.tz.trim() : undefined;
             const notesText = typeof item.notes === 'string' && item.notes.trim() ? item.notes.trim() : undefined;
-            return <div key={`${item.id}-${item.start_dt}-sidebar`} className="event-chip" style={{ borderLeftColor: '#38bdf8', background: withAlpha('#38bdf8', 0.22), color: '#e2e8f0' }}><strong>{apiEventTime}</strong> {item.title}<br /><small>ID {item.id}{subcalendarText}</small>{durationHours !== undefined && <><br /><small>Duration {durationHours.toFixed(2)}h</small></>}{locationText && <><br /><small>Location {locationText}</small></>}{timezoneText && <><br /><small>TZ {timezoneText}</small></>}{recurrenceText && <><br /><small>Rule {recurrenceText}</small></>}{notesText && <><br /><small>Notes {notesText}</small></>}</div>;
+            const eventColor = getApiEventColor(item, subcalendarLabels);
+            const eventTextColor = getHexTextColor(eventColor);
+            return <div key={`${item.id}-${item.start_dt}-sidebar`} className="event-chip" style={{ borderLeftColor: eventColor, background: withAlpha(eventColor, 0.22), color: eventTextColor }}><strong>{apiEventTime}</strong> {item.title}<br /><small>ID {item.id}{subcalendarText}</small>{durationHours !== undefined && <><br /><small>Duration {durationHours.toFixed(2)}h</small></>}{locationText && <><br /><small>Location {locationText}</small></>}{timezoneText && <><br /><small>TZ {timezoneText}</small></>}{recurrenceText && <><br /><small>Rule {recurrenceText}</small></>}{notesText && <><br /><small>Notes {notesText}</small></>}</div>;
           })}</div>}
         </aside>
       </section>
