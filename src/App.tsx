@@ -629,6 +629,24 @@ export function getLateToEarlyShiftCounts(events: ScheduleEvent[]) {
   });
 }
 
+export function syncSelectedContexts(
+  availableContexts: string[],
+  selectedContexts: string[],
+  hasCustomizedContextFilter: boolean
+) {
+  if (availableContexts.length === 0) {
+    return [];
+  }
+
+  if (!hasCustomizedContextFilter) {
+    return availableContexts;
+  }
+
+  const available = new Set(availableContexts);
+  const retained = selectedContexts.filter((item) => available.has(item));
+  return retained.length > 0 ? retained : availableContexts;
+}
+
 function BarChart({ data }: { data: NamedValue[] }) {
   if (data.length === 0) return <p className="chart-empty">No data for the selected range.</p>;
   const maxValue = Math.max(...data.map((item) => item.value), 1);
@@ -664,6 +682,7 @@ function App() {
   const [selectedDate, setSelectedDate] = useState<Date>(DEFAULT_MONTH);
   const [selectedPeople, setSelectedPeople] = useState<TeamMember[]>([...TEAM]);
   const [selectedContexts, setSelectedContexts] = useState<string[]>([...EVENT_CONTEXTS]);
+  const [hasCustomizedContextFilter, setHasCustomizedContextFilter] = useState(false);
   const [selectedCalendars, setSelectedCalendars] = useState<string[]>([]);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const [validationIssues, setValidationIssues] = useState<string[]>([]);
@@ -745,18 +764,8 @@ function App() {
   }, [events]);
 
   useEffect(() => {
-    if (availableContexts.length === 0) {
-      setSelectedContexts([]);
-      return;
-    }
-
-    setSelectedContexts((current) => {
-      const available = new Set(availableContexts);
-      const retained = current.filter((item) => available.has(item));
-      if (retained.length > 0) return retained;
-      return availableContexts;
-    });
-  }, [availableContexts]);
+    setSelectedContexts((current) => syncSelectedContexts(availableContexts, current, hasCustomizedContextFilter));
+  }, [availableContexts, hasCustomizedContextFilter]);
 
   useEffect(() => {
     if (calendarLegend.length === 0) {
@@ -874,7 +883,10 @@ function App() {
 
   const togglePerson = (person: TeamMember) => setSelectedPeople((current) => (current.includes(person) ? current.filter((item) => item !== person) : [...current, person]));
   const toggleCalendar = (label: string) => setSelectedCalendars((current) => (current.includes(label) ? current.filter((item) => item !== label) : [...current, label]));
-  const toggleContext = (context: string) => setSelectedContexts((current) => (current.includes(context) ? current.filter((item) => item !== context) : [...current, context]));
+  const toggleContext = (context: string) => {
+    setHasCustomizedContextFilter(true);
+    setSelectedContexts((current) => (current.includes(context) ? current.filter((item) => item !== context) : [...current, context]));
+  };
   const jumpToToday = () => {
     const today = new Date();
     setViewMonth(new Date(today.getFullYear(), today.getMonth(), 1));
@@ -882,6 +894,7 @@ function App() {
   };
   const resetFilters = () => {
     setSelectedPeople([...TEAM]);
+    setHasCustomizedContextFilter(false);
     setSelectedContexts([...availableContexts]);
     setSelectedCalendars(calendarLegend.map((item) => item.label));
   };

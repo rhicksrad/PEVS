@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { convertTeamupEvents, expandEventsForReporting, getLateToEarlyShiftCounts } from './App';
+import { convertTeamupEvents, expandEventsForReporting, getLateToEarlyShiftCounts, syncSelectedContexts } from './App';
 import type { TeamupEvent } from './lib/teamupApi';
 
 describe('convertTeamupEvents owner resolution', () => {
@@ -244,5 +244,27 @@ describe('getLateToEarlyShiftCounts', () => {
     ]);
 
     expect(counts.find((item) => item.label === 'Aimee Brooks')?.value).toBe(1);
+  });
+});
+
+describe('syncSelectedContexts', () => {
+  it('auto-selects all available contexts when the user has not customized the filter', () => {
+    expect(syncSelectedContexts(['General ECC Service', 'ECC Teaching'], ['General ECC Service'], false)).toEqual([
+      'General ECC Service',
+      'ECC Teaching'
+    ]);
+  });
+
+  it('retains the user selection when customized and still available', () => {
+    expect(syncSelectedContexts(['General ECC Service', 'ECC Teaching'], ['General ECC Service'], true)).toEqual([
+      'General ECC Service'
+    ]);
+  });
+
+  it('falls back to all contexts when a customized selection no longer exists', () => {
+    expect(syncSelectedContexts(['General ECC Service', 'ECC Teaching'], ['General Events'], true)).toEqual([
+      'General ECC Service',
+      'ECC Teaching'
+    ]);
   });
 });
