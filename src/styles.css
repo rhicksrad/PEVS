@@ -69,6 +69,11 @@ body {
   flex-wrap: wrap;
 }
 
+.filters-menu {
+  position: relative;
+  display: inline-flex;
+}
+
 .calendar-header h1 {
   margin: 0;
   font-size: clamp(1.3rem, 2.8vw, 2rem);
@@ -135,9 +140,11 @@ body {
 
 .filters-overlay {
   position: absolute;
-  top: calc(100% - 0.35rem);
-  left: 0.8rem;
-  width: min(720px, calc(100% - 1.6rem));
+  top: calc(100% + 0.35rem);
+  left: 0;
+  width: fit-content;
+  min-width: 220px;
+  max-width: min(92vw, 360px);
   z-index: 12;
   border: 1px solid rgba(71, 85, 105, 0.7);
   border-radius: 12px;
@@ -174,7 +181,7 @@ body {
 
 .filters-options {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: 1fr;
   gap: 0.45rem;
 }
 
@@ -487,8 +494,9 @@ input[type='date'] { color-scheme: dark; }
   .calendar-actions { width: 100%; }
 
   .filters-overlay {
-    left: 0.6rem;
-    width: calc(100% - 1.2rem);
+    left: auto;
+    right: 0;
+    max-width: min(94vw, 360px);
   }
 
   .filters-options { grid-template-columns: 1fr; }
