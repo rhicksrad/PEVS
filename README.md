@@ -1,6 +1,8 @@
-# ECC Scheduler Calendar (Vite + React + TypeScript)
+# What is Annie's schedule?
 
-This scheduling app is powered by live Teamup data through the Cloudflare Worker proxy at `https://pevs.hicksrch.workers.dev`.
+This is a focused, personal view of Annie's work schedule. It answers whether Annie is working now, shows her next scheduled item, and presents her upcoming work in a simple timeline. The site intentionally omits the old calendar, team filters, analytics, and every other person's schedule.
+
+Live data comes from Teamup through the Cloudflare Worker proxy at `https://pevs.hicksrch.workers.dev`. The UI only retains and renders events mapped to Annie's source calendar (`Ana Aghili`).
 
 ## Run locally
 
@@ -26,12 +28,12 @@ pnpm lint
 - If the Worker is unreachable, the UI shows a non-intrusive warning banner.
 
 
-## Data mapping policy
+## Annie-only data policy
 
-- Teamup events are mapped to app schedule events with source metadata (`source`, `calendarLabel`, and context) so validation can identify mapping gaps.
-- Owner/person mapping is validated for Teamup imports. If a Teamup event has no mapped owner and is not in an approved non-person context, the app emits a warning such as: `Owner not mapped for Teamup event "X" (calendar "Y")`.
-- Explicit non-person allowlist contexts are intentionally limited to reduce noise (currently `General Events` and `ECC Resident Chief`).
-- Owner mapping warnings are shown in the in-app validation banner and logged via existing validation issue handling.
+- The worker may return several source calendars, but the app filters normalized events before they enter UI state or browser cache.
+- Only events resolved to Annie's canonical source name are retained.
+- Team and source-calendar names are never rendered in the interface.
+- A last-known Annie-only copy is cached for a friendlier offline fallback.
 
 ## Favicon
 

@@ -1,6 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { convertTeamupEvents, expandEventsForReporting, getLateToEarlyShiftCounts, syncSelectedContexts } from './App';
+import {
+  convertTeamupEvents,
+  expandEventsForReporting,
+  getLateToEarlyShiftCounts,
+  selectAnnieScheduleEvents,
+  syncSelectedContexts
+} from './App';
 import type { TeamupEvent } from './lib/teamupApi';
 
 describe('convertTeamupEvents owner resolution', () => {
@@ -305,5 +311,45 @@ describe('syncSelectedContexts', () => {
       'General ECC Service',
       'ECC Teaching'
     ]);
+  });
+});
+
+describe('selectAnnieScheduleEvents', () => {
+  it('retains only Annie events and sorts them chronologically', () => {
+    const result = selectAnnieScheduleEvents([
+      {
+        id: 'coworker',
+        date: '2026-09-01',
+        title: 'Day Shift',
+        person: 'Paula Johnson',
+        category: 'shift',
+        context: 'General ECC Service'
+      },
+      {
+        id: 'annie-later',
+        date: '2026-09-04',
+        title: 'Day Shift',
+        person: 'Ana Aghili',
+        category: 'shift',
+        context: 'General ECC Service'
+      },
+      {
+        id: 'shared',
+        date: '2026-09-03',
+        title: 'General Event',
+        category: 'admin',
+        context: 'General Events'
+      },
+      {
+        id: 'annie-first',
+        date: '2026-09-02',
+        title: 'Teaching',
+        person: 'Ana Aghili',
+        category: 'teaching',
+        context: 'ECC Teaching'
+      }
+    ]);
+
+    expect(result.map((event) => event.id)).toEqual(['annie-first', 'annie-later']);
   });
 });
