@@ -4,7 +4,7 @@ import {
   convertTeamupEvents,
   expandEventsForReporting,
   getLateToEarlyShiftCounts,
-  selectAnnieScheduleEvents,
+  selectAnaScheduleEvents,
   syncSelectedContexts
 } from './App';
 import type { TeamupEvent } from './lib/teamupApi';
@@ -314,9 +314,9 @@ describe('syncSelectedContexts', () => {
   });
 });
 
-describe('selectAnnieScheduleEvents', () => {
-  it('retains only Annie events and sorts them chronologically', () => {
-    const result = selectAnnieScheduleEvents([
+describe('selectAnaScheduleEvents', () => {
+  it('retains only Ana events and sorts them chronologically', () => {
+    const result = selectAnaScheduleEvents([
       {
         id: 'coworker',
         date: '2026-09-01',
@@ -326,7 +326,7 @@ describe('selectAnnieScheduleEvents', () => {
         context: 'General ECC Service'
       },
       {
-        id: 'annie-later',
+        id: 'ana-later',
         date: '2026-09-04',
         title: 'Day Shift',
         person: 'Ana Aghili',
@@ -341,7 +341,7 @@ describe('selectAnnieScheduleEvents', () => {
         context: 'General Events'
       },
       {
-        id: 'annie-first',
+        id: 'ana-first',
         date: '2026-09-02',
         title: 'Teaching',
         person: 'Ana Aghili',
@@ -350,6 +350,6 @@ describe('selectAnnieScheduleEvents', () => {
       }
     ]);
 
-    expect(result.map((event) => event.id)).toEqual(['annie-first', 'annie-later']);
+    expect(result.map((event) => event.id)).toEqual(['ana-first', 'ana-later']);
   });
 });
